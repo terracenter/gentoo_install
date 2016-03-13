@@ -4,33 +4,37 @@
 This file is a step by step how to install Gentoo guide. With systemd, uefi, luks and much more.... keep reading :D
 
 ## Installation steps
+
 ### Start live-cd environment
 I like to use systemrescuecd to start a live-cd environment with uefi vars enabled, so, let's download it http://www.system-rescue-cd.org, then burn it or write into bootable usb and let's move on!
 
+Check if it is really UEFI, the output should lists the UEFI variables
 ```
-# Check if it is really UEFI, the output should lists the UEFI variables
 efivar -l
 ```
 
 ### Prepare Hard disk
+Start disk partitioning, I like to use cgdisk, but others like gdisk, parted, ... any other are welcome as long as UEFI is supported :P
 ```
-# Partitioning. Use gdisk: it’s an fdisk equilevant for GPT (GUID partition Table) which you need for UEFI boot.
 cgdisk /dev/sda
-# Create new GUID partition table and destroy everything on disk
-# Create the following ones. Not making a swap because I have plenty of ram. You can make one if you really want it.
+```
+
+Create new GUID partition table and destroy everything on disk. Then create the following two partitions like below code.
+I'm not making a swap because I have enough ram but feel free to make one if you really want it (inside crypt partition). 
+```
 gdisk -l /dev/sda
 Number  Start (sector)    End (sector)  Size       Code  Name
    1            2048         1050623   512.0 MiB   EF00  EFI
    2         1050624       500118158   238.0 GiB   8300  LVM
-
 ```
 
 ### Prepare crypt and filesystems
+Before start creating crypt filesystem it's much important to check which is the best performance setup on your system because you can't chenge it once created, so:
+```
+cryptsetup benchmark
+```
 
-Check which is the best performance crypto setup on your system:
-`cryptsetup benchmark`
-
-Mine is aes-xts:
+In my laptop the best performancing setup is aes-xts:
 ```
 # Tests are approximate using memory only (no storage IO).
 PBKDF2-sha1       306601 iterations per second for 256-bit key
@@ -53,13 +57,18 @@ PBKDF2-whirlpool  121362 iterations per second for 256-bit key
  twofish-xts   512b   322.6 MiB/s   327.4 MiB/s
 ```
 
-Encryption of the partition dedicated to lvm:
-`cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/sda2`
+Create the encryption layer for the partition dedicated to lvm:
+```
+cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/sda2
+```
 
+Then open our new crypted partition the create the lvm inside, remember that in this procedure the name *lvm* is only a trivial name, so you can use whenever you like:
+```
 cryptsetup open --type luks /dev/sda2 lvm
+```
 
-#### Create encrypted partitions
-This creates one partions for root, modify if /home or other partitions should be on separate partitions
+#### Create lvm partitions
+In my setup I use one partition for *root* filesystem and other for *home* files, so modify if /usr, /tmp or other partitions should be on separate partitions in your setup:
 ```
 pvcreate /dev/mapper/lvm
 vgcreate vg0 /dev/mapper/lvm
@@ -68,37 +77,44 @@ lvcreate -l +100%FREE vg0 --name home
 ```
 
 #### Create filesystems
+Let's create the filesystems for our three partitions (two of them inside crypted lvm setup ;-) ):
 ```
 mkfs.vfat -F32 /dev/sda1
 mkfs.ext4 /dev/mapper/vg0-root
 mkfs.ext4 /dev/mapper/vg0-home
 ```
 
-#### Mount the new system 
+#### Mount the new system
+It's time to create a directory where we mount our new root filesystem to be able to chroot into our new system:
 ```
 mount /dev/mapper/vg0-root /mnt/gentoo
-mkdir -p /mnt/boot/efi
-mount /dev/sda1 /mnt/gentoo/boot/
+mkdir -p /mnt/gentoo/boot
+mount /dev/sda1 /mnt/gentoo/boot
 mkdir /mnt/gentoo/home
 mount /dev/mapper/vg0-home /mnt/gentoo/home
 ```
 
+## Installing the Gentoo base system
 Before installing Gentoo, make sure that the date and time are set correctly. A mis-configured clock may lead to strange results in the future!
 `date`
 
 If needed set correct date like (March 02 22:09 2016)
 `date 030222092016`
 
-#### Downloading the stage tarball
+### Downloading the stage tarball
+To not start from a Linux from scratch installation, the Gentoo developed privides us with a Stage 3 which is a base binary semi working environment suitable to continue the Gentoo installation.
+To do that we just only need to download it and uncompress in our filesystem tree:
 ```
 cd /mnt/gentoo
 wget http://mirror.eu.oneandone.net/linux/distributions/gentoo/gentoo/releases/amd64/autobuilds/current-stage3-amd64/stage3-amd64-20160225.tar.bz2
 ```
 
-Unpacking the stage tarball
-`tar xvjpf stage3-*.tar.bz2 --xattrs`
+Unpacking the stage tarball:
+```
+tar xvjpf stage3-*.tar.bz2 --xattrs
+```
 
-Configuring compile options
+#### Configuring compile options:
 ```
 nano -w /mnt/gentoo/etc/portage/make.conf
 CFLAGS="-march=core-avx2 -O2 -pipe -mabm -madx -mavx256-split-unaligned-load -mavx256-split-unaligned-store -mprfchw -mrdseed"
@@ -106,7 +122,6 @@ CXXFLAGS="${CFLAGS}"
 MAKEOPTS="-j4"
 ```
 
-### Installing the Gentoo base system
 #### Selecting mirrors
 `mirrorselect -i -o >> /mnt/gentoo/etc/portage/make.conf`
 
