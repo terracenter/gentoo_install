@@ -1,27 +1,61 @@
-# Gentoo Installation
+# Gentoo install guide
 
 ## Introduction
-This file is a step by step how to install Gentoo guide. With systemd, uefi, luks and much more.... keep reading :D
+Gentoo is a Linux distribution where unlike binary distros like Arch, Debian and many others, software are compiled locally according the user preferences and optimizations. Precompiled binaries are also available, but these are out of reach of this guide.
+
+I've been using Gentoo since 2002 with some stages in Debian and Arch, but I always return to the source. What I like most from Gentoo are the possibility to get everything under control, deep customization and how do I learn from it.
+
+This is not a generic guide that everybody can simply follow to get Gentoo installed in their system. This guide is so focused to everybody who wants to:
+1. Install Gentoo Linux
+2. Learn from a very funny Linux distro and its installation process
+3. Want to have a systemd flavored Gentoo.
+
+If you are that kind of person, speak *emerge* and enter :wink:
 
 ## Installation steps
+> Before continue it's important to know that this guide if very focused to uefi, crypt/luks disk, lvm partitioning and systemd init system. If don't want to stick to any of these configurations it's also possible to follow this guide but remember to keep your eye on these steps to choose wherever you like. :thumbsup:
 
 ### Start live-cd environment
-I like to use systemrescuecd to start a live-cd environment with uefi vars enabled, so, let's download it http://www.system-rescue-cd.org, then burn it or write into bootable usb and let's move on!
+The first we need to install our Gentoo is a live-cd environment with uefi vars enabled. I like [systemrescuecd](http://www.system-rescue-cd.org) which is Gentoo based and has uefi vars enabled, so download it and write into [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick) and let's move on!
 
-Check if it is really UEFI, the output should lists the UEFI variables
+Once you have you live-cd environment started simply check if it's really UEFI:
 ```
 efivar -l
 ```
+If the output listed the UEFI variables we can go on!
 
 ### Prepare Hard disk
-Start disk partitioning, I like to use cgdisk, but others like gdisk, parted, ... any other are welcome as long as uefi is supported :P
+There some available options to do that job, I prefer to use gdisk, but others like cgdisk or parted should do the job.
 ```
-cgdisk /dev/sda
+gdisk /dev/sda
+```
+Create new GUID partition table and destroy everything on disk:
+```
+o (Create a new empty GUID partition table (GPT))
+Proceed? Y
 ```
 
-Create new GUID partition table and destroy everything on disk. Then create the following two partitions like below code.
-I'm not making a swap because I have enough ram but feel free to make one if you really want it (inside crypt partition).
+Then create the following two partitions like below code. I'm not making a swap because I have enough ram but feel free to make one if you really want it (inside crypt partition).
 ```
+n (Add a new partition)
+Partition number 1
+First sector 2048 (default)
+Last sector +512M
+Hex code EF00
+
+n (Add a new partition)
+Partition number 2
+First sector 1050624 (default)
+Last sector (press Enter to use remaining disk)
+Hex code 8300
+```
+If everything looks good, save and quit:
+```
+w
+Y
+```
+Partitions should look something like this:
+```sh
 gdisk -l /dev/sda
 Number  Start (sector)    End (sector)  Size       Code  Name
    1            2048         1050623   512.0 MiB   EF00  EFI
@@ -29,11 +63,10 @@ Number  Start (sector)    End (sector)  Size       Code  Name
 ```
 
 ### Prepare crypt and filesystems
-Before start creating crypt filesystem it's much important to check which is the best performance setup on your system because you can't change it once created, so:
+Let's set up the encryption container where the lvm volume will be. Just before start creating it it's much important to check which is the best performance setup on your system because you can't change it once created, run:
 ```
 cryptsetup benchmark
 ```
-
 In my laptop the best performancing setup is aes-xts:
 ```
 # Tests are approximate using memory only (no storage IO).
