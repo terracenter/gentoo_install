@@ -14,13 +14,13 @@ efivar -l
 ```
 
 ### Prepare Hard disk
-Start disk partitioning, I like to use cgdisk, but others like gdisk, parted, ... any other are welcome as long as UEFI is supported :P
+Start disk partitioning, I like to use cgdisk, but others like gdisk, parted, ... any other are welcome as long as uefi is supported :P
 ```
 cgdisk /dev/sda
 ```
 
 Create new GUID partition table and destroy everything on disk. Then create the following two partitions like below code.
-I'm not making a swap because I have enough ram but feel free to make one if you really want it (inside crypt partition). 
+I'm not making a swap because I have enough ram but feel free to make one if you really want it (inside crypt partition).
 ```
 gdisk -l /dev/sda
 Number  Start (sector)    End (sector)  Size       Code  Name
@@ -29,7 +29,7 @@ Number  Start (sector)    End (sector)  Size       Code  Name
 ```
 
 ### Prepare crypt and filesystems
-Before start creating crypt filesystem it's much important to check which is the best performance setup on your system because you can't chenge it once created, so:
+Before start creating crypt filesystem it's much important to check which is the best performance setup on your system because you can't change it once created, so:
 ```
 cryptsetup benchmark
 ```
@@ -62,7 +62,7 @@ Create the encryption layer for the partition dedicated to lvm:
 cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/sda2
 ```
 
-Then open our new crypted partition the create the lvm inside, remember that in this procedure the name *lvm* is only a trivial name, so you can use whenever you like:
+Then open our new crypt partition the create the lvm inside, remember that in this procedure the name *lvm* is only a trivial name, so you can use whenever you like:
 ```
 cryptsetup open --type luks /dev/sda2 lvm
 ```
@@ -77,7 +77,7 @@ lvcreate -l +100%FREE vg0 --name home
 ```
 
 #### Create filesystems
-Let's create the filesystems for our three partitions (two of them inside crypted lvm setup ;-) ):
+Let's create the filesystems for our three partitions (two of them inside crypt lvm setup ;-) ):
 ```
 mkfs.vfat -F32 /dev/sda1
 mkfs.ext4 /dev/mapper/vg0-root
@@ -96,13 +96,18 @@ mount /dev/mapper/vg0-home /mnt/gentoo/home
 
 ## Installing the Gentoo base system
 Before installing Gentoo, make sure that the date and time are set correctly. A mis-configured clock may lead to strange results in the future!
-`date`
+To check our current system date just run:
+```
+date
+```
 
 If needed set correct date like (March 02 22:09 2016)
-`date 030222092016`
+```
+date 030222092016
+```
 
-### Downloading the stage tarball
-To not start from a Linux from scratch installation, the Gentoo developed privides us with a Stage 3 which is a base binary semi working environment suitable to continue the Gentoo installation.
+#### Install the stage tarball
+To not need to start from a Linux from scratch installation the Gentoo developed provide us with a Stage 3 which is a base binary semi-working environment suitable to continue the Gentoo installation.
 To do that we just only need to download it and uncompress in our filesystem tree:
 ```
 cd /mnt/gentoo
@@ -123,7 +128,9 @@ MAKEOPTS="-j4"
 ```
 
 #### Selecting mirrors
-`mirrorselect -i -o >> /mnt/gentoo/etc/portage/make.conf`
+```
+mirrorselect -i -o >> /mnt/gentoo/etc/portage/make.conf
+```
 
 #### Configuring the main Gentoo repository
 ```
@@ -133,7 +140,9 @@ nano -w /mnt/gentoo/etc/portage/repos.conf/gentoo.conf
 ```
 
 #### Copy DNS info
-`cp -L /etc/resolv.conf /mnt/gentoo/etc/`
+```
+cp -L /etc/resolv.conf /mnt/gentoo/etc/
+```
 
 #### Mounting the necessary filesystems
 ```
@@ -145,30 +154,60 @@ mount --make-rslave /mnt/gentoo/dev
 ```
 
 #### Entering the new environment
+```
 chroot /mnt/gentoo /bin/bash
 source /etc/profile
 export PS1="(chroot) $PS1"
+```
 
-### Configuring Portage
+## Configuring Portage
 Installing a Portage snapshot
-`emerge-webrsync`
+```
+emerge-webrsync
+```
 
-Updating the Portage tree
-`emerge --sync`
+#### Updating the Portage tree
+```
+emerge --sync
+```
 
-Choosing the right profile
-`eselect profile list`
-
+#### Choosing the right profile
+```
+eselect profile list
+```
+From the output list we must select (at least) systemd profile. We can choose others like Gnome which needs systemd to run, but we're going to something more lightweight, like bspwm :D
+```
 [..]
 [12]  default/linux/amd64/13.0/systemd
 [..]
+```
+Choose the profile with eselect utility:
+```
+eselect profile set 12
+```
 
-`eselect profile set 12`
+#### Configuring the USE variable
+In this point we can choose to use a tool like *ufed* or simply edit it manually. I prefer to choose it manually and set per package defined USE Flags and use as minimum as possible as system-wide. So, if you choose the easy/system-wide way simply install ufed with:
+```
+emerge ufed
+```
+And then run it to select the USE Flag with a beautiful user interface :)
+```
+ufed
+```
+If you, like me, want to be everything under control and per package set, then you would love an utility named *quse* from *portage-utils*. This utility tell us which package use any specified flag.
+For example, if you want to know which packages use the *dbus* flag we simply need to run:
+```
+quse dbus
+```
+And all packages will be shown to us.
 
-### Configuring the USE variable
-`emerge ufed`
+Ok, nothing better than using it, let's install it!
+```
+emerge app-portage/portage-utils
+```
 
-Or simply edit *make.conf* file:
+Then, I use this few USE Flag in my make.conf file:
 ```
 nano -w /etc/portage/make.conf
 USE="X aac alsa aspell bash-completion boost branding caps contrib \
@@ -184,24 +223,54 @@ USE="X aac alsa aspell bash-completion boost branding caps contrib \
      xinerama xkb xml xmlrpc xorg xpm xrandr xwayland xz zeroconf \
      zsh-completion -cups"
 ```
-The USE flags corresponding to the instruction sets and other features specific to the x86 (amd64) architecture are configured into the variable called CPU_FLAGS_X86.
+The rest of the flags are defined per package inside */etc/portage/package.use/* as per type file. But you can put everything in one file, simply use arrange them as you like. I created these files (you can get it from this same repository):
+```
+ls -1 /etc/portage/package.use/
+admin
+devel
+emulation
+fonts
+fs
+games
+media
+network
+office
+perl
+system
+terms
+themes
+utils
+xorg
+```
+
+But USE flags are not the only optimizations we want from our portage system. Other flags corresponding to the instruction sets and other features specific to the x86 (amd64) architecture are configured into the variable called CPU_FLAGS_X86.
 We can simply use a useful python script to autodetect which of them we should select:
-`emerge --ask app-portage/cpuinfo2cpuflags`
+```
+emerge --ask app-portage/cpuinfo2cpuflags
+```
 
 And then:
-`cpuinfo2cpuflags-x86`
+```
+cpuinfo2cpuflags-x86
+```
 
 Copy the output line into */etc/portage/make.conf*
-`echo "CPU_FLAGS_X86="aes avx avx2 fma3 mmx mmxext pni popcnt sse sse2 sse3 sse4_1 sse4_2 ssse3" >> /etc/portage/make.conf`
+```
+echo "CPU_FLAGS_X86="aes avx avx2 fma3 mmx mmxext pni popcnt sse sse2 sse3 sse4_1 sse4_2 ssse3" >> /etc/portage/make.conf
+```
 
-### Timezone
-`echo "Europe/Madrid" > /etc/timezone`
+#### Timezone
+```
+echo "Europe/Madrid" > /etc/timezone
+```
 
 Next, reconfigure the sys-libs/timezone-data package, which will update the /etc/localtime file based on the /etc/timezone entry.
 The /etc/localtime file is used by the system C library to know the timezone the system is in.
-`emerge --config sys-libs/timezone-data`
+```
+emerge --config sys-libs/timezone-data
+```
 
-### Configure locales
+#### Configure locales
 ```
 nano -w /etc/locale.gen
 locale-gen
@@ -285,7 +354,7 @@ You can list your available modules with:
 `find /lib/modules/<kernel version>/ -type f -iname '*.o' -or -iname '*.ko' | less`
 
 ## Installing firmware
-Some drivers require additional firmware to be installed on the system before they work. This is often the case for network interfaces, especially wireless network interfaces. 
+Some drivers require additional firmware to be installed on the system before they work. This is often the case for network interfaces, especially wireless network interfaces.
 Most of the firmware is packaged in sys-kernel/linux-firmware:
 `emerge --ask sys-kernel/linux-firmware`
 
@@ -324,18 +393,21 @@ tmpfs                                           /tmp    tmpfs   nodev,nosuid    
 Warning!!! As we don't have encrypted partitions other than root which must be mounted by systemd before the whole system start we don't need to set it up there, so, our crypttab must be empty.
 
 ## Emerging systemd
+#### /etc/mtab
+In the past some utilities wrote information (like mount options) into /etc/mtab and thus it was supposed to be a regular file. Nowadays all software is supposed to avoid this problem. Still, before switching the file to become a symbolic link to /proc/self/mounts.
 
-ln -sf /proc/self/mounts /etc/mtab ?????????
+To create the symlink, run:
+```
+ln -sf /proc/self/mounts /etc/mtab
+```
 
 Ensure that you have systemd installed with all required USE flags
+```
 emerge -av app-portage/gentoolkit
 euse -E cryptsetup systemd gudev dbus
 emerge -av sys-apps/systemd
 emerge -av sys-apps/dbus
-
-## Change the root password
-While in chroot we need to change the root password of our new system just before rebooting it.
-`passwd`
+```
 
 ## Systemd boot (bootloader)
 Verify your EFI variables are accessible:
@@ -348,27 +420,35 @@ Verify that you have mounted /boot
 mount | grep boot
 
 Install systemd-boot:
-`bootctl --path=/boot install`
+```
+bootctl --path=/boot install
+```
 It will copy the systemd-boot binary to your EFI System Partition ($esp/EFI/systemd/systemd-bootx64.efi and $esp/EFI/Boot/BOOTX64.EFI - both of which are identical - on x64 systems) and add systemd-boot itself as the default EFI application (default boot entry) loaded by the EFI Boot Manager.
 
-### Add bootloader entries
-Find the UUID of /dev/sda2 and insert it into the file 
-blkid /dev/sda2 | awk '{print $2}' | sed 's/"//g' > /boot/loader/entries/gentoo.conf`
-`nano -w /boot/loader/entries/gentoo.conf`
+#### Add bootloader entries
+Add one entry into bootloader with this options:
+```
+nano -w /boot/loader/entries/gentoo.conf
+```
 ```
 title    Gentoo Linux
-linux    /kernel-genkernel-x86_64-4.4.4-gentoo
-initrd   /initramfs-genkernel-x86_64-4.4.4-gentoo
-options  cryptdevice=UUID=eace91f3-270e-4bc3-b0a3-b4a869fdbbfd:lvm:allow-discards root=/dev/mapper/vg0-root ro dolvm
+efi      /kernel-genkernel-x86_64-4.4.4-gentoo
+options  initrd=/initramfs-genkernel-x86_64-4.4.4-gentoo crypt_root=/dev/sda2 root=/dev/mapper/vg0-root ro dolvm
 ```
 Edit default loader
-`nano -w /boot/loader/loader.conf`
+```
+nano -w /boot/loader/loader.conf
+```
 ```
 default gentoo
 timeout 3
 ```
+## Rebooting into our new Gentoo systemd :D
+#### Enable lvm2
+```
+systemctl enable lvm2-lvmetad.service
+```
 
-## Enable lvm2
-`systemctl enable lvm2-lvmetad.service`
-
-
+#### Change the root password
+While in chroot we need to change the root password of our new system just before rebooting it.
+`passwd`
