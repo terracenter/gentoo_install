@@ -279,7 +279,7 @@ USE="X aac alsa aspell bash-completion boost branding caps contrib \
      lzma lzo mime mp3 mp4 mpeg nano-syntax networkmanager nss numa ogg \
      opencl opengl pango pcap pdf pie png pulseaudio python recode samba sdl \
      seccomp simplexml slang smp sockets sound spell sse sse2 ssh \
-     startup-notification svg symlink systemd tcmalloc theora threads \
+     startup-notification svg systemd tcmalloc theora threads \
      timezone truetype udisks upnp upnp-av upower usb video vim vim-syntax \
      vorbis wavpack wayland wayland-compositor wifi xcomposite xfs xft \
      xinerama xkb xml xmlrpc xorg xpm xrandr xwayland xz zeroconf \
@@ -348,12 +348,18 @@ Now reload the environment:
 env-update && source /etc/profile && export PS1="(chroot) $PS1"
 ```
 #### Installing Systemd
-Before continue we must remove udev otherwise we've cyclic dependencies in the future:
+Before continue we must remove udev and openrc otherwise we've cyclic dependencies in the future:
 ```
 emerge --deselect sys-fs/udev
 emerge --unmerge sys-fs/udev
 ```
-Ensure that we have systemd installed with all required USE flags:
+Also be sure that we don't have nothing related with openrc or systemd as masked package:
+```
+emerge --deselect sys-apps/openrc
+emerge --unmerge sys-apps/openrc
+rm /etc/portage/package.mask/systemd
+```
+Once we have our system prepared it's time to ensure that we have systemd installed with all required USE flags:
 ```
 emerge -av app-portage/gentoolkit
 euse -E cryptsetup systemd gudev dbus
@@ -522,4 +528,82 @@ systemctl enable lvm2-lvmetad.service
 While in chroot we need to change the root password of our new system just before rebooting it.
 ```
 passwd
+```
+#### And reboot (you don't need to cross your fingers, everything should goes fine :shrink:)
+```
+exit # To exit from chroot
+sync # To sync filesystems
+reboot
+```
+## Post-installation
+### Setting the Hostname
+When booted using systemd, a tool called hostnamectl exists for editing /etc/hostname and /etc/machine-info. So we don't need to edit the file manually simlpy run:
+```
+hostnamectl set-hostname <HOSTNAME>
+```
+### Configuring Network
+Let's plug our new Gentoo system to the world!! :earth_africa:
+
+We can choose between two options, to use systemd as network manager or standalone one, I prefer networkmanager but here are the two options:
+#### Using systemd-networkd
+systemd-networkd is useful for simple configuration of wired network interfaces. It is disabled by default.
+
+To configure systemd-networkd we must create a \*.network file under /etc/systemd/network. Here is an example for a simple DHCP configuration:
+```
+nano -w /etc/systemd/network/50-dhcp.network
+```
+```
+[Match]
+Name=en*
+[Network]
+DHCP=yes
+```
+And then tell systemd to manage and start that service:
+```
+systemctl enable systemd-networkd.service
+systemctl start systemd-networkd.service
+```
+#### Using NetworkManager
+Often NetworkManager is used to configure network settings. I personally use nmtui because it's easy and has a ncurses client. Just install it:
+```
+emerge networkmanager
+```
+And now simply run the following command and follow a guided configuration process through nmtui:
+```
+nmtui
+```
+### Setting locales
+Yes, you're right, we set the locales before but once booted with systemd, the tool localectl is used to set locale and console or X11 keymaps. So, let's set it again to be sure that everything goes fine.
+
+To change the system locale, run the following command:
+```
+localectl set-locale LANG=en_US.utf8
+```
+Change the virtual console keymap:
+```
+localectl set-keymap es
+```
+And finally, to set the X11 layout:
+```
+localectl set-x11-keymap es
+```
+### Setting time and date
+Time and date can be set using the timedatectl utility. That will also allow users to set up synchronization without needing to rely on net-misc/ntp or other providers than systemd's own implementation.
+
+To set the local time of the system clock directly:
+```
+timedatectl set-time "yyyy-MM-dd hh:mm:ss"
+```
+To set time zone:
+```
+timedatectl list-timezones
+timedatectl set-timezone Europe/Madrid
+```
+Set systemd-timesyncd as a simple SNTP daemon. Systemd-timesyncd that only implements a client side, focusing only on querying time from one remote server. It should be more than appropriate for most installations.
+```
+timedatectl set-ntp true
+```
+To check the status of the daemon:
+```
+timedatectl status
 ```
