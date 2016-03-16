@@ -488,19 +488,29 @@ To create the symlink, run:
 ln -sf /proc/self/mounts /etc/mtab
 ```
 ### Systemd boot (bootloader)
-Verify your EFI variables are accessible:
+Systemd-boot is a simple UEFI boot manager which executes configured EFI images. The default entry is selected by an on-screen menu.
+
+It is simple to configure, but can only start EFI executables, such as the Linux kernel EFISTUB, UEFI Shell, GRUB, and go on.
+
+Before installing the EFI binaries we need to check if EFI variables are accessible:
 ```
 emerge -av sys-libs/efivar
 efivar -l
 ```
-Verify that you have mounted /boot
+Verify that you have mounted /boot:
+```
 mount | grep boot
-
-Install systemd-boot:
+```
+Once got it mounted then install the systemd-boot binaries:
 ```
 bootctl --path=/boot install
 ```
-It will copy the systemd-boot binary to your EFI System Partition ($esp/EFI/systemd/systemd-bootx64.efi and $esp/EFI/Boot/BOOTX64.EFI - both of which are identical - on x64 systems) and add systemd-boot itself as the default EFI application (default boot entry) loaded by the EFI Boot Manager.
+This command will copy the systemd-boot binary to your EFI System Partition ($esp/EFI/systemd/systemd-bootx64.efi and $esp/EFI/Boot/BOOTX64.EFI - both of which are identical - on x64 systems) and add systemd-boot itself as the default EFI application (default boot entry) loaded by the EFI Boot Manager.
+
+Every time there's a new version of the systemd you should copy the new binaries to that System Partition by running:
+```
+bootctl --path=/boot update
+```
 #### Add bootloader entries
 Add one entry into bootloader with this options:
 ```
@@ -519,7 +529,27 @@ nano -w /boot/loader/loader.conf
 default gentoo
 timeout 3
 ```
-### Rebooting into our new Gentoo systemd :D
+#### Efibootmgr
+Efibootmgr is not a bootloader itself it's a tool that interacts with the EFI firmware of the system, which itself is acting as a boot loader. With the efibootmgr application, boot entries can be created, reshuffled and updated.
+
+First we need to install the package:
+```
+emerge --ask sys-boot/efibootmgr
+```
+To list the current boot entries:
+```
+efibootmgr -v
+```
+I'm only Gentoo in my system so I don't really need anything but the Gentoo entry so I just delete everything with:
+```
+efibootmgr -b _ENTRY_ID_ -B
+```
+Once everything is delete we can add our new systemd-boot loader entry:
+```
+efibootmgr -c -d /dev/sda -p 2 -L "Gentoo" -l "\efi\boot\bootx64.efi"
+```
+Perfect, we're almost ready to reboot.
+### Rebooting into our new Gentoo systemd
 #### Enable lvm2
 ```
 systemctl enable lvm2-lvmetad.service
@@ -546,9 +576,9 @@ Let's plug our new Gentoo system to the world!! :earth_africa:
 
 We can choose between two options, to use systemd as network manager or standalone one, I prefer networkmanager but here are the two options:
 #### Using systemd-networkd
-systemd-networkd is useful for simple configuration of wired network interfaces. It is disabled by default.
+systemd-networkd is useful for simple configuration of wired network interfaces. As it's disabled by default we need to configure it by creating a \*.network file under /etc/systemd/network.
 
-To configure systemd-networkd we must create a \*.network file under /etc/systemd/network. Here is an example for a simple DHCP configuration:
+Here is an example for a simple ethernet DHCP configuration:
 ```
 nano -w /etc/systemd/network/50-dhcp.network
 ```
