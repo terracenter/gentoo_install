@@ -384,6 +384,7 @@ Let's install the gentoo-sources:
 emerge --ask sys-kernel/gentoo-sources
 ```
 Now it is time to configure and compile the kernel sources. There are two approaches to do that job:
+
 1. The kernel is manually built and install.
 2. A tool called genkernel is used to automatically build and install the Linux kernel.
 
