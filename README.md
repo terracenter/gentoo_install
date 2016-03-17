@@ -662,6 +662,7 @@ In order to index the file system to provide faster file location capabilities w
 ```
 emerge -a sys-apps/mlocate
 ```
+To keep databse update we need to run `updatedb` often.
 ### Filesystem tools
 Additional to the tools for managing ext2, ext3, or ext4 filesystems (sys-fs/e2fsprogs) which are already installed as a part of the *@system* set I like to install other filesystem utilities like VFAT, XFS, NTFS and so on:
 ```
@@ -704,7 +705,37 @@ With the Gentoo installation finished and the system rebooted, if everything has
 ```
 rm /stage3-*.tar.bz2*
 ```
+### Power consumption
+#### Powertop
+```
+emerge -a sys-power/powertop
+```
+The first step we need to do is to calibrate it, it's quite long process but the most important is to keep our system until the whole process is finished.
+```
+powertop --calibrate
+```
+To apply automatically optimal settings at boot we need to create a new Systemd unit:
+```
+nano -w /etc/systemd/system/powertop.service
+```
+```
+[Unit]
+Description=Powertop tunings
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/powertop --auto-tune
+
+[Install]
+WantedBy=multi-user.target
+```
+Enable at each boot:
+```
+systemctl enable powertop.service
+```
 ## Conclusion
-Although there's a lot of work to do, I stop this guide in that point and if I add new stuff here will be very without any comment or explanation, just to know. Of course I'll add my dot files in my github someday and it's possible to add some Ansible playbooks to automate Gentoo installation but, who knows :wink:
+Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
+
+Of course I'll add my dot files in my github someday and it's possible to add some Ansible playbooks to automate Gentoo installation but, who knows :wink:
 
 Hope you enjoyed!
