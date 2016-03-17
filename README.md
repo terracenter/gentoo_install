@@ -8,6 +8,7 @@ The name of Gentoo comes from the penguin specie who are the fastest swimming pe
 I've been using Gentoo since 2002 with some stages in Debian and Arch, but I always return to the source. What I like most from Gentoo are the possibility to get everything under control, deep customization and how do I learn from it.
 
 This is not a generic guide that everybody can simply follow to get Gentoo installed in their system. This guide is so focused to everybody who wants to:
+
 1. Install Gentoo Linux
 2. Learn from a very funny Linux distro and its installation process
 3. Want to have a systemd flavored Gentoo.
