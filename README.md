@@ -667,5 +667,44 @@ Additional to the tools for managing ext2, ext3, or ext4 filesystems (sys-fs/e2f
 ```
 emerge -a sys-fs/xfsprogs sys-fs/exfat-utils sys-fs/dosfstools sys-fs/ntfs3g
 ```
-### Adding a User
-Until now we have done everything as root and do of course need to add regular users for everyday work.
+### Adding a user for daily use
+Until now we have done everything as root but working as root on a Unix/Linux system is dangerous and should be avoided as much as possible. Therefore it is strongly recommended to add a user for day-to-day use.
+
+The groups the user is member of define what activities the user can perform. The following table lists a number of important groups:
+
+| Group | Description |
+|:-------:|:---------------------------------------------------------------------------:|
+| audio | Be able to access the audio devices. |
+| games | Be able to play games. |
+| portage | Be able to access portage restricted resources. |
+| usb | Be able to access USB devices. |
+| video | Be able to access video capturing hardware and doing hardware acceleration. |
+| wheel | Be able to use su. |
+
+Once you selected which groups would you like to add simply run:
+```
+useradd -m -G users,wheel,audio,video,audio,usb -s /bin/bash <USER>
+```
+To set the user password run:
+```
+passwd <USER>
+```
+### Exec as root with sudo
+Sudo is a way that a regular user could run commands as root user. It's very useful to avoid using root password each time we need to run a command which needs root perms. To install run:
+```
+emerge -a app-admin/sudo
+```
+Then edit config file with command:
+```
+visudo
+```
+There's lot of examples inside the config file so we should not have any problem to set it up.
+### Removing installation tarballs
+With the Gentoo installation finished and the system rebooted, if everything has gone well, we can now remove the downloaded stage3 tarball from the hard disk. Remember that they were downloaded to the / directory.
+```
+rm /stage3-*.tar.bz2*
+```
+## Conclusion
+Although there's a lot of work to do, I stop this guide in that point and if I add new stuff here will be very without any comment or explanation, just to know. Of course I'll add my dot files in my github someday and it's possible to add some Ansible playbooks to automate Gentoo installation but, who knows :wink:
+
+Hope you enjoyed!
