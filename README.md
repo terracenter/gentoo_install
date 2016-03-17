@@ -561,7 +561,8 @@ While in chroot we need to change the root password of our new system just befor
 ```
 passwd
 ```
-#### And reboot (you don't need to cross your fingers, everything should goes fine :smirk:)
+#### And reboot to your new Gentoo system
+Don't worry you don't need to cross your fingers, everything should goes fine :smirk:
 ```
 exit # To exit from chroot
 sync # To sync filesystems
