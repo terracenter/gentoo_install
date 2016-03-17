@@ -1,5 +1,5 @@
 # Gentoo install guide
-
+![gentoo_logo](https://sources.gentoo.org/cgi-bin/viewvc.cgi/gentoo/xml/images/artwork/gentoo-logo-dark-146x149.png)
 ## Introduction
 Gentoo is a Linux distribution where unlike binary distros like Arch, Debian and many others, software are compiled locally according the user preferences and optimizations.
 
@@ -733,6 +733,8 @@ Enable at each boot:
 ```
 systemctl enable powertop.service
 ```
+#### GPU
+
 ## Conclusion
 Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
 
