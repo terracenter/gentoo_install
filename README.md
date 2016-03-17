@@ -520,8 +520,8 @@ nano -w /boot/loader/entries/gentoo.conf
 ```
 ```
 title    Gentoo Linux
-efi      /kernel-genkernel-x86_64-4.4.4-gentoo
-options  initrd=/initramfs-genkernel-x86_64-4.4.4-gentoo crypt_root=/dev/sda2 root=/dev/mapper/vg0-root ro dolvm
+efi      /kernel-genkernel-x86_64-4.4.6-gentoo
+options  initrd=/initramfs-genkernel-x86_64-4.4.6-gentoo crypt_root=/dev/sda2 root=/dev/mapper/vg0-root root_trim=yes init=/usr/lib/systemd/systemd ro dolvm
 ```
 Edit default loader:
 ```
@@ -705,8 +705,7 @@ With the Gentoo installation finished and the system rebooted, if everything has
 ```
 rm /stage3-*.tar.bz2*
 ```
-### Power consumption
-#### Powertop
+### Power consumption optimization with Powertop
 ```
 emerge -a sys-power/powertop
 ```
@@ -724,7 +723,7 @@ Description=Powertop tunings
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/powertop --auto-tune
+ExecStart=/usr/sbin/powertop --auto-tune
 
 [Install]
 WantedBy=multi-user.target
@@ -733,8 +732,44 @@ Enable at each boot:
 ```
 systemctl enable powertop.service
 ```
-#### GPU
-
+### GPU
+Prior to install xorg we will configure our video card, mine is Intel Generation 6 so we need to add this line into make.conf:
+```
+nano -w /etc/portage/make.conf
+```
+```
+VIDEO_CARDS="intel i965"
+```
+Before installing xorg we need to configure it again by adding custom graphic card information:
+```
+nano -w /etc/X11/xorg.conf.d/20-intel.conf
+```
+```
+Section "Device"
+   Identifier  "Intel Graphics"
+   Driver      "intel"
+	Option      "AccelMethod"  "sna"
+	Option      "DRI"          "3"
+	Option      "Backlight"    "intel_backlight"
+EndSection
+```
+### Input devices
+We need to do the same with the input devices. I'm using a laptop so check if you need to add joystick, mouse, keyboard, ... :wink:
+```
+nano -w /etc/portage/make.conf
+```
+```
+INPUT_DEVICES="evdev synaptics
+```
+### X server
+At the time to write this guide wayland is available but I'ld like to use bspwm which only support xorg so I'll continue with xorg server installation and configuration:
+```
+emerge -a xorg-server
+```
+### Some useful stuff
+```
+emerge -a app-admin/ccze app-arch/unp app-editors/vim app-eselect/eselect-awk app-misc/screen app-shells/gentoo-zsh-completions app-shells/gentoo-zsh-completions app-vim/colorschemes app-vim/eselect-syntax app-vim/genutils app-vim/ntp-syntax media-gfx/feh sys-process/htop x11-terms/rxvt-unicode
+```
 ## Conclusion
 Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
 
