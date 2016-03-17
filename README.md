@@ -265,7 +265,7 @@ And all packages will be shown to us.
 
 Ok, nothing better than test it by ourself!
 ```
-emerge app-portage/portage-utils
+emerge -a app-portage/portage-utils
 ```
 
 These are the system wide USE Flags described in my make.conf file:
@@ -297,7 +297,7 @@ USE flags are not the only optimizations we want from our portage system. Other 
 
 We can simply use a useful python script to auto-detect which of them we should set. Install *app-portage/cpuinfo2cpuflags*:
 ```
-emerge --ask app-portage/cpuinfo2cpuflags
+emerge -a app-portage/cpuinfo2cpuflags
 ```
 And then run it to get those values:
 ```
@@ -362,10 +362,10 @@ rm /etc/portage/package.mask/systemd
 ```
 Once we have our system prepared it's time to ensure that we have systemd installed with all required USE flags:
 ```
-emerge -av app-portage/gentoolkit
+emerge -a app-portage/gentoolkit
 euse -E cryptsetup systemd gudev dbus
-emerge -av sys-apps/systemd
-emerge -av sys-apps/dbus
+emerge -a sys-apps/systemd
+emerge -a sys-apps/dbus
 ```
 ### Configuring Linux kernel
 While Portage is the core of Gentoo Linux system the Linux kernel is the core of the operating system and offers an interface for programs to access the hardware. The kernel contains most of the device drivers.
@@ -381,7 +381,7 @@ emerge --search sources
 #### Installing the sources
 Let's install the gentoo-sources:
 ```
-emerge --ask sys-kernel/gentoo-sources
+emerge -a sys-kernel/gentoo-sources
 ```
 Now it is time to configure and compile the kernel sources. There are two approaches to do that job:
 
@@ -394,7 +394,7 @@ So I'll explain how to use genkernel which help us to maintain config files and 
 
 However, one thing is true: it is vital to know the system when a kernel is configured manually. Start by install required packages:
 ```
-emerge --ask sys-apps/pciutils
+emerge -a sys-apps/pciutils
 ```
 
 Edit */etc/genkernel.conf* to set our preferences:
@@ -445,12 +445,12 @@ find /lib/modules/<kernel version>/ -type f -iname '*.o' -or -iname '*.ko' | les
 #### Installing firmware
 Some drivers require additional firmware to be installed on the system before they work. This is often the case for network interfaces, especially wireless network interfaces. Most of the firmware is packaged in *sys-kernel/linux-firmware*, so installing them are almost needed in a laptop system:
 ```
-emerge --ask sys-kernel/linux-firmware
+emerge -a sys-kernel/linux-firmware
 ```
 #### LVM Configuration
 Install lvm tools if it's not yet installed:
 ```
-emerge -av sys-fs/lvm2
+emerge -a sys-fs/lvm2
 ```
 Then edit the package configurations:
 ```
@@ -496,7 +496,7 @@ It is simple to configure, but can only start EFI executables, such as the Linux
 
 Before installing the EFI binaries we need to check if EFI variables are accessible:
 ```
-emerge -av sys-libs/efivar
+emerge -a sys-libs/efivar
 efivar -l
 ```
 Verify that you have mounted /boot:
@@ -536,15 +536,23 @@ Efibootmgr is not a bootloader itself it's a tool that interacts with the EFI fi
 
 First we need to install the package:
 ```
-emerge --ask sys-boot/efibootmgr
+emerge -a sys-boot/efibootmgr
 ```
 To list the current boot entries:
 ```
 efibootmgr -v
 ```
+```
+BootCurrent: 0003
+Timeout: 1 seconds
+BootOrder: 0003
+Boot0000* Linux Boot Manager	HD(1,GPT,3eb8effe-8e1d-4670-987c-9b49b5f605b2,0x800,0x1ff801)/File(\EFI\systemd\systemd-bootx64.efi)
+Boot0001* gentoo	HD(1,GPT,02f231b8-8f9a-471c-b3a9-dc7edb1bd70e,0x800,0xee000)/File(\EFI\gentoo\grubx64.efi)
+Boot0003* Gentoo Linux	PciRoot(0x0)/Pci(0x1f,0x2)/Sata(2,32768,0)/HD(1,GPT,73f682fe-e07b-4870-be82-d85077f8aaa2,0x800,0x100000)/File(\EFI\systemd\systemd-bootx64.efi)
+```
 I'm only Gentoo in my system so I don't really need anything but the Gentoo entry so I just delete everything with:
 ```
-efibootmgr -b _ENTRY_ID_ -B
+efibootmgr -b <ENTRY_ID> -B
 ```
 Once everything is delete we can add our new systemd-boot loader entry:
 ```
@@ -599,7 +607,7 @@ systemctl start systemd-networkd.service
 #### Using NetworkManager
 Often NetworkManager is used to configure network settings. I personally use nmtui because it's easy and has a ncurses client. Just install it:
 ```
-emerge networkmanager
+emerge -a networkmanager
 ```
 And now simply run the following command and follow a guided configuration process through nmtui:
 ```
@@ -649,3 +657,15 @@ nano -w /etc/systemd/timesyncd.conf
 NTP=0.europe.pool.ntp.org 1.europe.pool.ntp.org 2.europe.pool.ntp.org 3.europe.pool.ntp.org
 FallbackNTP=0.gentoo.pool.ntp.org 1.gentoo.pool.ntp.org 2.gentoo.pool.ntp.org 3.gentoo.pool.ntp.org
 ```
+### File indexing
+In order to index the file system to provide faster file location capabilities we will install sys-apps/mlocate:
+```
+emerge -a sys-apps/mlocate
+```
+### Filesystem tools
+Additional to the tools for managing ext2, ext3, or ext4 filesystems (sys-fs/e2fsprogs) which are already installed as a part of the *@system* set I like to install other filesystem utilities like VFAT, XFS, NTFS and so on:
+```
+emerge -a sys-fs/xfsprogs sys-fs/exfat-utils sys-fs/dosfstools sys-fs/ntfs3g
+```
+### Adding a User
+Until now we have done everything as root and do of course need to add regular users for everyday work.
