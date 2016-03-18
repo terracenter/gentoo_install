@@ -770,6 +770,11 @@ emerge -a xorg-server
 ```
 emerge -a app-admin/ccze app-arch/unp app-editors/vim app-eselect/eselect-awk app-misc/screen app-shells/gentoo-zsh-completions app-shells/gentoo-zsh-completions app-vim/colorschemes app-vim/eselect-syntax app-vim/genutils app-vim/ntp-syntax media-gfx/feh sys-process/htop x11-terms/rxvt-unicode
 ```
+### Overlays
+Overlays contain additional packages for your Gentoo system while the main repository contains all the software packages maintained by Gentoo developers, additional package trees are usually hosted by repositories. Users can add such additional repositories to the tree that are "laid over" the main tree - hence the name, overlays.
+```
+emerge -a app-portage/layman app-portage/eix
+```
 ## Conclusion
 Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
 
