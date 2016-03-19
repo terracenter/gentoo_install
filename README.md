@@ -821,6 +821,18 @@ Overlays contain additional packages for your Gentoo system while the main repos
 ```
 emerge -a app-portage/layman app-portage/eix
 ```
+To list all available overlays simply run:
+```
+layman -L
+```
+To install an overlay run:
+```
+layman -a <NAME>
+```
+To keep your installed overlays up to date, run:
+```
+layman -S
+```
 ## Conclusion
 Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
 
