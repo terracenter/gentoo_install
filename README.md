@@ -766,10 +766,40 @@ At the time to write this guide wayland is available but I'ld like to use bspwm 
 ```
 emerge -a xorg-server
 ```
-### Some useful stuff
+### A bunch of useful stuff
 ```
 emerge -a app-admin/ccze app-arch/unp app-editors/vim app-eselect/eselect-awk app-misc/screen app-shells/gentoo-zsh-completions app-shells/gentoo-zsh-completions app-vim/colorschemes app-vim/eselect-syntax app-vim/genutils app-vim/ntp-syntax media-gfx/feh sys-process/htop x11-terms/rxvt-unicode
 ```
+### Portage nice value
+We're running portage with modified scheduling priority, to not impact whole system performance during compilation.
+```
+echo 'PORTAGE_NICENESS="15"' >> /etc/portage/make.conf
+```
+### Setting portage branches
+Branch defines if portage use stable or testing packages. Every package in the portage tree has it stable and testing version. The ACCEPT_KEYWORDS variable defines what software branch to use on the system. It defaults to the stable software branch for the system's architecture, for instance amd64.
+
+I recommend to stick with the stable branch. However, if stability is not that much important for you and/or want to help out Gentoo by submitting bug reports to https://bugs.gentoo.org, then the testing is your way.
+
+There are two ways to approach the testing branch for packages:
+
+1. System wide setting: to make or system set to testing branch.
+```
+nano -w /etc/portage/make.conf
+```
+```
+ACCEPT_KEYWORDS="~amd64"
+```
+
+2. Per package setting: we can set testing branch only for particular packages (This is and example, set whatever you want).
+```
+nano -w /etc/portage/package.accept_keywords
+```
+```
+sys-kernel/gentoo-sources
+sys-power/powertop
+app-admin/pass
+```
+
 ### Overlays
 Overlays contain additional packages for your Gentoo system while the main repository contains all the software packages maintained by Gentoo developers, additional package trees are usually hosted by repositories. Users can add such additional repositories to the tree that are "laid over" the main tree - hence the name, overlays.
 ```
