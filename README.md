@@ -799,7 +799,23 @@ sys-kernel/gentoo-sources
 sys-power/powertop
 app-admin/pass
 ```
-
+### Masked and unmasked packages
+Masking a package the way where Gentoo Developers block a package version from being auto installed. The reason why that package is masked is mentioned in the package.mask file (situated in /usr/portage/profiles/ by default). But if we still wants to use this package, then add the desired version (usually this will be the exact same line from the package.mask file in the profile) to the /etc/portage/package.unmask file (or in a file in that directory if it is a directory).
+```
+nano -w /etc/portage/package.unmask
+```
+```
+>=app-emulation/docker-compose-1.5.2
+>=app-emulation/docker-swarm-1.1.3
+>=app-emulation/docker-1.7.1
+```
+It is also possible to ask Portage not to take a certain package or a specific version of a package into account. To do so, mask the package by adding an appropriate line to the /etc/portage/package.mask location (either in that file or in a file in this directory).
+```
+nano -w /etc/portage/package.mask
+```
+```
+=sys-kernel/gentoo-sources-4.5.0
+```
 ### Overlays
 Overlays contain additional packages for your Gentoo system while the main repository contains all the software packages maintained by Gentoo developers, additional package trees are usually hosted by repositories. Users can add such additional repositories to the tree that are "laid over" the main tree - hence the name, overlays.
 ```
