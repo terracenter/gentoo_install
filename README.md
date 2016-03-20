@@ -819,7 +819,7 @@ nano -w /etc/portage/package.mask
 ### Overlays
 Overlays contain additional packages for your Gentoo system while the main repository contains all the software packages maintained by Gentoo developers, additional package trees are usually hosted by repositories. Users can add such additional repositories to the tree that are "laid over" the main tree - hence the name, overlays.
 ```
-emerge -a app-portage/layman app-portage/eix
+emerge -a app-portage/layman
 ```
 To list all available overlays simply run:
 ```
@@ -832,6 +832,26 @@ layman -a <NAME>
 To keep your installed overlays up to date, run:
 ```
 layman -S
+```
+#### Custom overlay
+If we want to maintain a custom set of ebuilds we just only need to create a local overlay doing these few steps:
+```
+mkdir -p /usr/local/portage/{metadata,profiles}
+echo '<OVERLAY_NAME>' > /usr/local/portage/profiles/repo_name
+echo 'masters = gentoo' > /usr/local/portage/metadata/layout.conf
+chown -R portage:portage /usr/local/portage
+```
+Next, tell portage about the overlay:
+```
+mkdir -p /etc/portage/repos.conf
+```
+```
+nano -w /etc/portage/repos.conf/local.conf
+```
+```
+[<OVERLAY_NAME>]
+location = /usr/local/portage
+auto-sync = no
 ```
 ## Conclusion
 Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
