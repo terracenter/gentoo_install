@@ -158,9 +158,9 @@ Let's see how to setting up portage with our system CPU flags:
 ```
 nano -w /mnt/gentoo/etc/portage/make.conf
 ```
-These are my Intel Core i7 available flags:
+These are the safest available flags:
 ```
-CFLAGS="-march=core-avx2 -O2 -pipe -mabm -madx -mavx256-split-unaligned-load -mavx256-split-unaligned-store -mprfchw -mrdseed"
+CFLAGS="-march=native -O2 -pipe -fomit-frame-pointer"
 CXXFLAGS="${CFLAGS}"
 ```
 And MAKEOPTS describe how many allowed parallel jobs are available to use by building system. Usually I use the same that my CPU has, but somebody says that *number_of_cpu + 1* is the best option. I don't care
