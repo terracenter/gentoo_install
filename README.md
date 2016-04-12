@@ -154,13 +154,18 @@ Wikipedia says:
 
 Portage describe how to build the packages based on CPU architecture Flags and which features are available for every package with what are known as "use flags".
 
-Let's see how to setting up portage with our system CPU flags:
+Let's see how to setting up portage with our system CPU flags.
+Run:
+```
+gcc -c -Q -march=native --help=target | grep march
+```
+GCC will tell you which architecture have in your system to be set in the portage optimizations flags:
 ```
 nano -w /mnt/gentoo/etc/portage/make.conf
 ```
-These are the safest available flags:
+These are mine safest available flags:
 ```
-CFLAGS="-march=native -O2 -pipe -fomit-frame-pointer"
+CFLAGS="-march=broadwell -O2 -pipe -fomit-frame-pointer"
 CXXFLAGS="${CFLAGS}"
 ```
 And MAKEOPTS describe how many allowed parallel jobs are available to use by building system. Usually I use the same that my CPU has, but somebody says that *number_of_cpu + 1* is the best option. I don't care
@@ -552,7 +557,7 @@ Boot0003* Gentoo Linux	PciRoot(0x0)/Pci(0x1f,0x2)/Sata(2,32768,0)/HD(1,GPT,73f68
 ```
 I'm only Gentoo in my system so I don't really need anything but the Gentoo entry so I just delete everything with:
 ```
-efibootmgr -b <ENTRY_ID> -B
+efibootmgr -b <entry_id> -B
 ```
 Once everything is delete we can add our new systemd-boot loader entry:
 ```
@@ -580,7 +585,7 @@ reboot
 ### Setting the Hostname
 When booted using systemd, a tool called hostnamectl exists for editing /etc/hostname and /etc/machine-info. So we don't need to edit the file manually simlpy run:
 ```
-hostnamectl set-hostname <HOSTNAME>
+hostnamectl set-hostname <hostname>
 ```
 ### Configuring Network
 Let's plug our new Gentoo system to the world!! :earth_africa:
@@ -684,11 +689,11 @@ The groups the user is member of define what activities the user can perform. Th
 
 Once you selected which groups would you like to add simply run:
 ```
-useradd -m -G users,wheel,audio,video,audio,usb -s /bin/bash <USER>
+useradd -m -G users,wheel,audio,video,audio,usb -s /bin/bash <username>
 ```
 To set the user password run:
 ```
-passwd <USER>
+passwd <username>
 ```
 ### Exec as root with sudo
 Sudo is a way that a regular user could run commands as root user. It's very useful to avoid using root password each time we need to run a command which needs root perms. To install run:
@@ -827,7 +832,7 @@ layman -L
 ```
 To install an overlay run:
 ```
-layman -a <NAME>
+layman -a <overlay_name>
 ```
 To keep your installed overlays up to date, run:
 ```
@@ -837,7 +842,7 @@ layman -S
 If we want to maintain a custom set of ebuilds we just only need to create a local overlay doing these few steps:
 ```
 mkdir -p /usr/local/portage/{metadata,profiles}
-echo '<OVERLAY_NAME>' > /usr/local/portage/profiles/repo_name
+echo '<overlay_name>' > /usr/local/portage/profiles/repo_name
 echo 'masters = gentoo' > /usr/local/portage/metadata/layout.conf
 chown -R portage:portage /usr/local/portage
 ```
@@ -849,9 +854,53 @@ mkdir -p /etc/portage/repos.conf
 nano -w /etc/portage/repos.conf/local.conf
 ```
 ```
-[<OVERLAY_NAME>]
+[<overlay_name>]
 location = /usr/local/portage
 auto-sync = no
+```
+### Virtualization (How to use Qemu & kvm)
+Virtualization is widely use nowadays. Everybody wants to test some environments, apps, or simply have a virtualized machine with other operating systems. In order to do that we should use any virtualization platform available for desktop use such as virtualbox, kvm/qemu, xen or vmware. Among all these options I choose kvm/qemu because its performance and simplicity. So here we are!
+
+First we need to check if our hardware support virtualization:
+```
+grep --color -E "vmx|svm" /proc/cpuinfo
+```
+We could also check if kvm device is available in our */dev* directory:
+```
+ls /dev/kvm
+```
+If both are available we can continue installing kvm, otherwise you shouldn't use virtualization on your machine.
+#### Kernel options
+Before continue building kvm with should check if we have some kernel options enabled as module or build-in.
+```
+[*] Virtualization  --->
+    <*>   Kernel-based Virtual Machine (KVM) support
+    <*>   KVM for Intel processors support <-- if we use Intel cpu, otherwise disable it
+    <*>   KVM for AMD processors support <-- if we use AMD cpu, otherwise disable it
+    <*>   Host kernel accelerator for virtio net
+Device Drivers  --->
+   [*] Network device support  --->
+      [*]   Network core driver support
+      <*>   Universal TUN/TAP device driver support
+   [*] Networking support  --->
+      Networking options  --->
+         <*> The IPv6 protocol
+         <*> 802.1d Ethernet Bridging
+   File systems  --->
+      <*> The Extended 4 (ext4) filesystem
+      [*]   Ext4 Security Labels
+```
+Once we have kernel compiled and running with new options we can continue by installing package:
+```
+emerge -av app-emulation/qemu
+```
+In order to run kvm as normal user and not as root we should add our user account to the *kvm* group:
+```
+gpasswd -a <username> kvm
+```
+Finally, to be sure that libvirt daemon is running all the time we should enable with systemd:
+```
+systemctl enable libvirtd.service
 ```
 ## Conclusion
 Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
