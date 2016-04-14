@@ -903,6 +903,7 @@ Finally, to be sure that libvirt daemon is running all the time we should enable
 systemctl enable libvirtd.service
 ```
 ### How to read and write in Japanese
+
 ### Speed up the system with prelink
 What is Prelink and how can it help me? I'm sure that most of you are asking this question right now well, most applications we have installed in our system use shared libraries. Every time a program call this libraries they need to be loaded into memory. As more libraries program needs as more time it takes to resolve all symbol references. So prelink simply "maps" this symbol references and makes applications run faster. Of course this is a summary of what it does, but it's enough for us.
 
@@ -926,9 +927,11 @@ Finally we will prelink our system with:
 prelink -amR
 ```
 Which is:
+
 - **a**: prelink all binary files.
 - **m**: conserve virtual memory space. If we have a lot of binaries to prelink it takes a lot of space during the process, this parameter will ensure that we not run out of memory.
 - **R**: randomize the address ordering to enhance security against buffer overflows.
+
 ## Conclusion
 Although there's a lot of work to do, I stop this guide in that point which is the base for any system to run and I'll add more stuff daily so keep watching :smile:
 
