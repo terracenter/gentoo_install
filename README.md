@@ -158,6 +158,7 @@ mkfs.ext4 /dev/mapper/vg0-home
 ```
 
 ### Mount the new system
+
 It's time to mount our partitions:
 
 ```shell
@@ -197,7 +198,7 @@ Unpacking the stage tarball into our local disk:
 tar xvjpf stage3-*.tar.bz2 --xattrs
 ```
 
-### Configuring compile options:
+### Configuring compile options
 
 As I said, Gentoo is a great Linux distro because its deep customization so portage is its cornerstone.
 
@@ -1080,31 +1081,29 @@ echo 'PORTAGE_NICENESS="15"' >> /etc/portage/make.conf
 
 Branch defines if portage use stable or testing packages. Every package in the portage tree has it stable and testing version. The ACCEPT_KEYWORDS variable defines what software branch to use on the system. It defaults to the stable software branch for the system's architecture, for instance amd64.
 
-I recommend to stick with the stable branch. However, if stability is not that much important for you and/or want to help out Gentoo by submitting bug reports to https://bugs.gentoo.org, then the testing is your way.
+I recommend to stick with the stable branch. However, if stability is not that much important for you and/or want to help out Gentoo by submitting bug reports to [https://bugs.gentoo.org](https://bugs.gentoo.org), then the testing is your way.
 
 There are two ways to approach the testing branch for packages:
 
 1. System wide setting: to make or system set to testing branch.
 
-```shell
-nano -w /etc/portage/make.conf
-```
-
-```shell
-ACCEPT_KEYWORDS="~amd64"
-```
+>```shell
+>nano -w /etc/portage/make.conf
+>```
+>```shell
+>ACCEPT_KEYWORDS="~amd64"
+>```
 
 2. Per package setting: we can set testing branch only for particular packages (This is and example, set whatever you want).
 
-```shell
-nano -w /etc/portage/package.accept_keywords
-```
-
-```shell
-sys-kernel/gentoo-sources
-sys-power/powertop
-app-admin/pass
-```
+>```shell
+>nano -w /etc/portage/package.accept_keywords
+>```
+>```shell
+>sys-kernel/gentoo-sources
+>sys-power/powertop
+>app-admin/pass
+>```
 
 ### Masked and unmasked packages
 
