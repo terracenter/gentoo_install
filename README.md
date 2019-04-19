@@ -420,7 +420,7 @@ emerge -a app-portage/cpuid2cpuflags
 And then run it to get those values:
 
 ```shell
-cpuinfo2cpuflags-x86
+cpuid2cpuflags-x86
 ```
 
 ```shell
