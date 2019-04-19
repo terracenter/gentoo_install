@@ -73,7 +73,7 @@ n (Add a new partition)
 Partition number 2
 First sector 1050624 (default)
 Last sector (press Enter to use remaining disk)
-Hex code 8300
+Hex code 8e00
 ```
 
 If everything looks good, save and quit:
