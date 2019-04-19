@@ -414,7 +414,7 @@ USE flags are not the only optimizations we want from our portage system. Other 
 We can simply use a useful python script to auto-detect which of them we should set. Install *app-portage/cpuinfo2cpuflags*:
 
 ```shell
-emerge -a app-portage/cpuinfo2cpuflags
+emerge -a app-portage/cpuid2cpuflags
 ```
 
 And then run it to get those values:
