@@ -162,6 +162,7 @@ mkfs.ext4 /dev/mapper/vg0-home
 It's time to mount our partitions:
 
 ```shell
+mkdir /mnt/gentoo
 mount /dev/mapper/vg0-root /mnt/gentoo
 mkdir -p /mnt/gentoo/boot
 mount /dev/sda1 /mnt/gentoo/boot
