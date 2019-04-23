@@ -73,7 +73,7 @@ n (Add a new partition)
 Partition number 2
 First sector 1050624 (default)
 Last sector (press Enter to use remaining disk)
-Hex code 8300
+Hex code 8e00
 ```
 
 If everything looks good, save and quit:
@@ -162,6 +162,7 @@ mkfs.ext4 /dev/mapper/vg0-home
 It's time to mount our partitions:
 
 ```shell
+mkdir /mnt/gentoo
 mount /dev/mapper/vg0-root /mnt/gentoo
 mkdir -p /mnt/gentoo/boot
 mount /dev/sda1 /mnt/gentoo/boot
@@ -413,13 +414,13 @@ USE flags are not the only optimizations we want from our portage system. Other 
 We can simply use a useful python script to auto-detect which of them we should set. Install *app-portage/cpuinfo2cpuflags*:
 
 ```shell
-emerge -a app-portage/cpuinfo2cpuflags
+emerge -a app-portage/cpuid2cpuflags
 ```
 
 And then run it to get those values:
 
 ```shell
-cpuinfo2cpuflags-x86
+cpuid2cpuflags-x86
 ```
 
 ```shell
