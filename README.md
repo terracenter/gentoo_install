@@ -1,6 +1,6 @@
 # Gentoo install guide
 
-![gentoo_logo](https://sources.gentoo.org/cgi-bin/viewvc.cgi/gentoo/xml/images/artwork/gentoo-logo-dark-146x149.png)
+![gentoo_logo](images/200px-gentoo-logo-dark.svg.png)
 
 ## Contents
 
@@ -19,7 +19,12 @@ Gentoo is a Linux distribution where unlike binary distros like Arch, Debian and
 
 The name of Gentoo comes from the penguin specie who are the fastest swimming penguin in the world.
 
-I've been using Gentoo since 2002 with some stages in Debian and Arch, but I always return to the source. What I like most from Gentoo are the possibility to get everything under control, deep customization and how do I learn from it.
+I've been using Gentoo since 2002, and what I like most from Gentoo is:
+
+* Is fun
+* The possibility to get everything under control
+* Deep customization
+* One learn **a lot** from using it
 
 This is not a generic guide that everybody can simply follow to get Gentoo installed in their system. This guide is so focused to everybody who wants to:
 
@@ -935,14 +940,14 @@ Until now we have done everything as root but working as root on a Unix/Linux sy
 
 The groups the user is member of define what activities the user can perform. The following table lists a number of important groups:
 
-| Group | Description |
-|:-------:|:---------------------------------------------------------------------------:|
-| audio | Be able to access the audio devices. |
-| games | Be able to play games. |
-| portage | Be able to access portage restricted resources. |
-| usb | Be able to access USB devices. |
-| video | Be able to access video capturing hardware and doing hardware acceleration. |
-| wheel | Be able to use su. |
+|  Group  |                                 Description                                 |
+| :-----: | :-------------------------------------------------------------------------: |
+|  audio  |                    Be able to access the audio devices.                     |
+|  games  |                           Be able to play games.                            |
+| portage |               Be able to access portage restricted resources.               |
+|   usb   |                       Be able to access USB devices.                        |
+|  video  | Be able to access video capturing hardware and doing hardware acceleration. |
+|  wheel  |                             Be able to use su.                              |
 
 Once you selected which groups would you like to add simply run:
 
