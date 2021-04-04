@@ -637,7 +637,7 @@ issue_discards = 1
 volume_list = ["vg0"] # Our VG volume name, check with vgdisplay
 ```
 
-### Fstab
+### Fstab
 
 Before editing fstab we need to know which UUID are using our devices inside and outside lvm and luks volumes:
 
