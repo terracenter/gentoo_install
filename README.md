@@ -15,9 +15,9 @@
 
 ## Introduction
 
-Gentoo is a Linux distribution where unlike binary distros like Arch, Debian and many others, software are compiled locally according the user preferences and optimizations.
+Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian and many others, the software is compiled locally according to the user preferences and optimizations.
 
-The name of Gentoo comes from the penguin specie who are the fastest swimming penguin in the world.
+The name of Gentoo comes from the penguin species who are the fastest swimming penguin in the world.
 
 I've been using Gentoo since 2002, and what I like most from Gentoo is:
 
@@ -26,29 +26,35 @@ I've been using Gentoo since 2002, and what I like most from Gentoo is:
 * Deep customization
 * One learn **a lot** from using it
 
-This is not a generic guide that everybody can simply follow to get Gentoo installed in their system. This guide is so focused to everybody who wants to:
+| :warning: Disclaimer                                                                                                                |
+| :---------------------------------------------------------------------------------------------------------------------------------- |
+| Please keep in mind that this is not a generic guide on how to install Gentoo. This guide focuses on a few precise install options. |
+
+This guide is made for those of you who wants to:
 
 1. Install Gentoo Linux
-2. Learn from a very funny Linux distro and its installation process
-3. Want to have a systemd flavored Gentoo.
+2. Learn from an amazing Linux distro and its installation process
+3. Want to use systemD and not OpenRC
 
 If you are that kind of person, speak *emerge* and enter :wink:
 
 ## Installation concerns
 
-> Before continue it's important to know that this guide if very focused to uefi, crypt/luks disk, lvm partitioning and systemd init system. If don't want to stick to any of these configurations it's also possible to follow this guide but remember to keep your eye on these steps to choose wherever you like. :thumbsup:
+> Stop before further reading. It's important to know that this guide only contemplates an installation with uefi, crypt/luks disk, lvm partitioning and systemd init system. Please remember that if you want a different setup don't take this as a how-to but more as a general guideline. Also remember to keep an eye on each step to adapt it to your taste :thumbsup:
 
 ## Start live-cd environment
 
-The first we need to install our Gentoo is a live-cd environment with uefi vars enabled. I like [systemrescuecd](http://www.system-rescue-cd.org) which is Gentoo based and has uefi vars enabled, so download it and write into [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick) and let's move on!
+The first thing we need to install our Gentoo is a live-cd environment with uefi vars enabled.
 
-Once you have you live-cd environment started simply check if it's really UEFI:
+I personally like [systemrescuecd](http://www.system-rescue-cd.org) because ~~is a Gentoo based distro~~ (now is Arch based, but still makes the job) and has uefi vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick). But it doesn't mather what distro you use as far as it's UEFI compatible.
+
+To make sure that the distro is UEFI compatible we can run:
 
 ```shell
 efivar -l
 ```
 
-If the output listed the UEFI variables we can go on!
+If the command listed the UEFI variables we're ready to go!
 
 ### Prepare Hard disk
 
@@ -195,18 +201,18 @@ In order to avoid starting from a Linux from scratch, the Gentoo developers prov
 
 ```shell
 cd /mnt/gentoo
-wget http://mirror.eu.oneandone.net/linux/distributions/gentoo/gentoo/releases/amd64/autobuilds/current-stage3-amd64/stage3-amd64-20160225.tar.bz2
+wget http://mirror.eu.oneandone.net/linux/distributions/gentoo/gentoo/releases/amd64/autobuilds/current-stage3-amd64/stage3-amd64-systemd-20210405T120143Z.tar.xz
 ```
 
 Unpacking the stage tarball into our local disk:
 
 ```shell
-tar xvjpf stage3-*.tar.bz2 --xattrs
+tar xvf stage3-*.tar.xz --xattrs
 ```
 
 ### Configuring compile options
 
-As I said, Gentoo is a great Linux distro because its deep customization so portage is its cornerstone.
+As I said, Gentoo is a great Linux distro because its deep customization and portage is its cornerstone.
 
 Portage is the Gentoo autobuild system, similar to packing systems like apt, yum or pacman in binary distros. It's inspired by FreeBSD port system. Pre-compiled binaries are also available, but these are out of reach of this guide.
 
@@ -553,7 +559,7 @@ So I'll explain how to use genkernel which help us to maintain config files and 
 However, one thing is true: it is vital to know the system when a kernel is configured manually. Start by install required packages:
 
 ```shell
-emerge -a sys-apps/pciutils
+emerge -a sys-apps/pciutils sys-kernel/genkernel
 ```
 
 Edit */etc/genkernel.conf* to set our preferences:
