@@ -44,8 +44,6 @@ The first thing we need to install our Gentoo is a live-cd environment with UEFI
 
 I like [systemrescuecd](http://www.system-rescue-cd.org) because is a ~~Gentoo-based~~ Arch-based distro and has UEFI vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick). But it doesn't matter what distro you use as far as it's UEFI compatible.
 
-[Gentoo Minimal installation CD](https://www.gentoo.org/downloads/)
-
 To make sure that the distro we're using is UEFI compatible, run:
 
 ```shell
