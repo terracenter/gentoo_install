@@ -19,59 +19,69 @@ Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian and
 
 The name of Gentoo comes from the penguin species who are the fastest swimming penguin in the world.
 
-I've been using Gentoo since 2002, and what I like most from Gentoo is:
+I've been using Gentoo since 2002 (20+ years already :atonished:), and what I like most from Gentoo is:
 
 * Is fun
-* The possibility to get everything under control
+* The possibility of getting everything under control
 * Deep customization
-* One learn **a lot** from using it
+* One learn **a lot** about GNU/Linux from using it
+
+Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power comes great responsability**. Bear in mind that although Gentoo gives you a lot of flexibility, and ~~insane~~ tremendous amount of customization, and all the benefits I mentioned above, it also requires time, dedication and patiance.
+
+If you are that kind of person, speak *emerge* and enter :sunrise:
 
 | :warning: Disclaimer                                                                                                                |
 | :---------------------------------------------------------------------------------------------------------------------------------- |
-| Please keep in mind that this is not a generic guide on how to install Gentoo. This guide focuses on a few precise install options. |
-
-This guide is made for those of you who wants to:
-
-1. Install Gentoo Linux
-2. Learn from an amazing Linux distro and its installation process
-3. Want to use systemD and not OpenRC
-
-If you are that kind of person, speak *emerge* and enter :wink:
+| This guide is intended to be a learning experience, and even if you can copy & paste all commands, I will try to explain all steps to give you an understanding of what we're doing and why. |
 
 ## Installation concerns
 
-> Stop before further reading. It's important to know that this guide only contemplates an installation with uefi, crypt/luks disk, lvm partitioning and systemd init system. Please remember that if you want a different setup don't take this as a how-to but more as a general guideline. Also remember to keep an eye on each step to adapt it to your taste :thumbsup:
+> Stop before further reading. It's important to know that this guide only contemplates an installation with UEFI, crypt/luks disk, lvm partitioning, and systemd init system. Please remember that if you want a different setup, don't take this as a how-to but more as a general guideline.
 
 ## Start live-cd environment
 
-The first thing we need to install our Gentoo is a live-cd environment with uefi vars enabled.
+The first thing we need to install our Gentoo is a live-cd environment with UEFI vars enabled.
 
-I personally like [systemrescuecd](http://www.system-rescue-cd.org) because ~~is a Gentoo based distro~~ (now is Arch based, but still makes the job) and has uefi vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick). But it doesn't mather what distro you use as far as it's UEFI compatible.
+I like [systemrescuecd](http://www.system-rescue-cd.org) because is a ~~Gentoo-based~~ Arch-based distro and has UEFI vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick). But it doesn't matter what distro you use as far as it's UEFI compatible.
 
-To make sure that the distro is UEFI compatible we can run:
+[Gentoo Minimal installation CD](https://www.gentoo.org/downloads/)
+
+To make sure that the distro we're using is UEFI compatible, run:
 
 ```shell
 efivar -l
 ```
 
-If the command listed the UEFI variables we're ready to go!
+If the command listed the UEFI variables we're good to go :checkered_flag:
 
 ### Prepare Hard disk
 
-There some available options to do that job, I prefer to use gdisk, but others like cgdisk or parted should do the job.
+I suggest you use whatever you're familiar with, I'm going to show you the process using `gdisk`, but others like `cgdisk` or `parted` will do the job.
+
+:information_source: Start by partitioning the disk, the following command will enter the `gdisk` console.
+
+If you use SATA disk, run:
 
 ```shell
 gdisk /dev/sda
 ```
 
-Create new GUID partition table and destroy everything on disk:
+I will continue using NVME, but if you use a SATA disk, from now on, replace everything appearance of `/dev/nvme0n1` or `/dev/nvme0n1p1`, for `/dev/sda` or `dev/sda1` :thumbsup:
+
+If you use `NVME` disk, then run:
+
+```shell
+gdisk /dev/nvme0n1
+```
+
+Create a new GUID partition table and destroy everything on the disk:
 
 ```shell
 o (Create a new empty GUID partition table (GPT))
 Proceed? Y
 ```
 
-Then create the following two partitions like below code. I'm not making a swap because I have enough ram but feel free to make one if you really want it (inside crypt partition).
+Now that we have the disk empty, we're going to create some new partitions. The standard partition schema would be a partition for EFI, a partition for SWAP, and one or more for the system. I'm not going to create a partition for SWAP because I have enough RAM to handle the load of the system, but feel free to create one for your needs.
 
 ```shell
 n (Add a new partition)
@@ -87,7 +97,7 @@ Last sector (press Enter to use remaining disk)
 Hex code 8e00
 ```
 
-If everything looks good, save and quit:
+Now, apply the changes to the disk and quit:
 
 ```shell
 w
@@ -105,13 +115,17 @@ Number  Start (sector)    End (sector)  Size       Code  Name
 
 ### Prepare crypt container
 
-Let's set up the encryption container where the lvm volume will be. Just before start creating it it's much important to check which is the best performance setup on your system because you can't change it once created, run:
+Aight, at this point we have the disk partitioned, now we want to create the encrypted container that will enclose the LVM volumes.
+
+To get the best performance of working with encrypted containers, we should use an encryption algorithm that is supported with our CPU. We have to be wise picking up because won't be able to changed it afterwards. Luckily for us, `cryptosetup` is here :ok_hand:
+
+Run:
 
 ```shell
 cryptsetup benchmark
 ```
 
-In my laptop the best performance setup is aes-xts:
+You should see something like this:
 
 ```shell
 # Tests are approximate using memory only (no storage IO).
@@ -135,17 +149,25 @@ PBKDF2-whirlpool  121362 iterations per second for 256-bit key
  twofish-xts   512b   322.6 MiB/s   327.4 MiB/s
 ```
 
-Once we know that proceed with the creation itself:
+Choose the option with better overall performance. In the output above would be `aes-xts` and the key size `PBKDF2-sha256`.
+
+When you have yours choosen, then proceed by running:
 
 ```shell
-cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/sda2
+cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/nvme0n1p1
 ```
 
-Then open up our new crypt container to be able to create the lvm inside. In this procedure the label *cryptcontainer* is only a trivial name, so you can use whenever you like:
+The command is going to ask you to confirm with a `YES`. After a second you should see something like: `Command successful`.
+
+Then we need to open (decrypt) the container to start creating the volumes inside.
+
+When we open the container we need to specify a label name to identify the container once opened. As you can see, in the command below I've used **cryptcontainer**, be creative :stuck_out_tongue_winking_eye:
 
 ```shell
-cryptsetup open --type luks /dev/sda2 cryptcontainer
+cryptsetup open --type luks /dev/nvme0n1p1 cryptcontainer
 ```
+
+And... we're done with the encryption. Now, volume time! :sound:
 
 ### Create lvm volumes
 
