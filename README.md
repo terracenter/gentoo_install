@@ -19,7 +19,7 @@ Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian and
 
 The name of Gentoo comes from the penguin species who are the fastest swimming penguin in the world.
 
-I've been using Gentoo since 2002 (20+ years already :atonished:), and what I like most from Gentoo is:
+I've been using Gentoo since 2002 (20+ years already :astonished:), and what I like most from Gentoo is:
 
 * Is fun
 * The possibility of getting everything under control
