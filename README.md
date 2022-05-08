@@ -19,7 +19,7 @@ Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian and
 
 The name of Gentoo comes from the penguin species who are the fastest swimming penguin in the world.
 
-I've been using Gentoo since 2002 (20+ years already :astonished:), and what I like most from Gentoo is:
+I've been using Gentoo since 2002 (20+ years already :astonished: ), and what I like most from Gentoo is:
 
 * Is fun
 * The possibility of getting everything under control
@@ -30,8 +30,8 @@ Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient 
 
 If you are that kind of person, speak *emerge* and enter :sunrise:
 
-| :warning: Disclaimer                                                                                                                |
-| :---------------------------------------------------------------------------------------------------------------------------------- |
+| :warning: Disclaimer                                                                                                                                                                         |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | This guide is intended to be a learning experience, and even if you can copy & paste all commands, I will try to explain all steps to give you an understanding of what we're doing and why. |
 
 ## Installation concerns
@@ -56,7 +56,9 @@ If the command listed the UEFI variables we're good to go :checkered_flag:
 
 I suggest you use whatever you're familiar with, I'm going to show you the process using `gdisk`, but others like `cgdisk` or `parted` will do the job.
 
-:information_source: Start by partitioning the disk, the following command will enter the `gdisk` console.
+| :information_source: Info point                                         |
+| :---------------------------------------------------------------------- |
+| Once you run the first gdisk command, you will enter the gdisk console. |
 
 If you use SATA disk, run:
 
@@ -111,7 +113,7 @@ Number  Start (sector)    End (sector)  Size       Code  Name
    2         1050624       500118158   238.0 GiB   8300  LVM
 ```
 
-### Prepare crypt container
+### Prepare encrypted container
 
 Aight, at this point we have the disk partitioned, now we want to create the encrypted container that will enclose the LVM volumes.
 
@@ -152,7 +154,7 @@ Choose the option with better overall performance. In the output above would be 
 When you have yours choosen, then proceed by running:
 
 ```shell
-cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/nvme0n1p1
+cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/nvme0n1p2
 ```
 
 The command is going to ask you to confirm with a `YES`. After a second you should see something like: `Command successful`.
@@ -162,41 +164,133 @@ Then we need to open (decrypt) the container to start creating the volumes insid
 When we open the container we need to specify a label name to identify the container once opened. As you can see, in the command below I've used **cryptcontainer**, be creative :stuck_out_tongue_winking_eye:
 
 ```shell
-cryptsetup open --type luks /dev/nvme0n1p1 cryptcontainer
+cryptsetup open --type luks /dev/nvme0n1p2 cryptcontainer
 ```
 
 And... we're done with the encryption. Now, volume time! :sound:
 
 ### Create lvm volumes
 
-In that point we've our luks container and using lvm minimize the partitioning design time, because you can modify whenever you need. In my setup I use one partition for *root* filesystem and other for *home* files, feel free to add as much as you need/like:
+| :information_source: Info point                                                                                                                                                      |
+| :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| For those of you that are not familiar with this acronym, LVM stands for **L**ogical **V**olume **M**anagement. You can read more about it [here](https://wiki.gentoo.org/wiki/LVM). |
+
+The good thing about logical volumes is that you can modify them at any point. In this example I'm going to create two logical volumes, one for the `root` partition and one for `home`, but feel free to create as many as you want.
+
+Also, I'll use the name `vg0` to identifty this volume group. This is a trivial name, so again, be creative :D
 
 ```shell
 pvcreate /dev/mapper/cryptcontainer
 vgcreate vg0 /dev/mapper/cryptcontainer
+```
+
+At this point, let's check that what we have if what we want:
+
+```shell
+vgdisplay
+```
+
+You should see something like:
+
+```shell
+  --- Volume group ---
+  VG Name               vg0
+  System ID
+  Format                lvm2
+  Metadata Areas        1
+  Metadata Sequence No  1
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                0
+  Open LV               0
+  Max PV                0
+  Cur PV                1
+  Act PV                1
+  VG Size               63.48 GiB
+  PE Size               4.00 MiB
+  Total PE              16251
+  Alloc PE / Size       0 / 0
+  Free  PE / Size       16251 / 63.48 GiB
+  VG UUID               uQEI07-lgcP-hQ6j-jTR8-BhsO-AsTA-IlLMwC
+```
+
+If what you see makes sense, let's create the volumes:
+
+```shell
 lvcreate --size 50G vg0 --name root
 lvcreate -l +100%FREE vg0 --name home
 ```
 
-### Create filesystems
-
-Let's create the filesystems for our three partitions (two of them inside crypt lvm setup :v:):
+To double check what we've done, run:
 
 ```shell
-mkfs.vfat -F32 /dev/sda1
+lvdisplay
+```
+
+You should see something like:
+
+```shell
+  --- Logical volume ---
+  LV Path                /dev/vg0/root
+  LV Name                root
+  VG Name                vg0
+  LV UUID                k9q9df-vWcJ-skpB-ISYI-SAE6-ux0i-igalqG
+  LV Write Access        read/write
+  LV Creation host, time sysrescue, 2022-05-07 17:17:04 +0000
+  LV Status              available
+  # open                 0
+  LV Size                20.00 GiB
+  Current LE             5120
+  Segments               1
+  Allocation             inherit
+  Read ahead sectors     auto
+  - currently set to     256
+  Block device           254:1
+
+  --- Logical volume ---
+  LV Path                /dev/vg0/home
+  LV Name                home
+  VG Name                vg0
+  LV UUID                JKx6lV-dcsx-Yi8c-BnE2-z3Dn-kCl0-VRB70T
+  LV Write Access        read/write
+  LV Creation host, time sysrescue, 2022-05-07 17:17:09 +0000
+  LV Status              available
+  # open                 0
+  LV Size                43.48 GiB
+  Current LE             11131
+  Segments               1
+  Allocation             inherit
+  Read ahead sectors     auto
+  - currently set to     256
+  Block device           254:2
+```
+
+If you do, well done :muscle: Let's keep rolling!
+
+### Create filesystems
+
+Filesystems, so the good thing about Linux is that we've a lot of filesystems that we can use, but this is also the bad thing :sweat_smile: what to choose and when will most probably come to your mind at some point.
+
+You can read as much as you want [here](https://wiki.gentoo.org/wiki/Filesystem), but we're going to keep it easy, we will use `ext4`, which is the default filesystem for many Linux distributions.
+
+Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how it UEFI works), and them our main `ext4` filesystems:
+
+```shell
+mkfs.vfat -F32 /dev/nvme0n1p1
 mkfs.ext4 /dev/mapper/vg0-root
 mkfs.ext4 /dev/mapper/vg0-home
 ```
 
-### Mount the new system
+### Mount the new filesystems
 
-It's time to mount our partitions:
+With our logica volumes created and our partitions ready, let's mount our partitions to start building our Gentoo system:
 
 ```shell
 mkdir /mnt/gentoo
 mount /dev/mapper/vg0-root /mnt/gentoo
 mkdir -p /mnt/gentoo/boot
-mount /dev/sda1 /mnt/gentoo/boot
+mount /dev/nvme0n1p1 /mnt/gentoo/boot
 mkdir /mnt/gentoo/home
 mount /dev/mapper/vg0-home /mnt/gentoo/home
 ```
