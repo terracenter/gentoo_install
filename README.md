@@ -297,41 +297,58 @@ mount /dev/mapper/vg0-home /mnt/gentoo/home
 
 ## Installing the Gentoo base system
 
-Before installing Gentoo, make sure that the date and time are set correctly. A mis-configured clock may lead to strange results in the future! To check our current system date just run:
+Before installing Gentoo, make sure that the date and time are set correctly. A mis-configured clock may lead to strange results in the future, and you don't want this :)
+
+To check our current system date just run:
 
 ```shell
 date
 ```
 
-If needed set correct date like (March 02 22:09 2016):
+Select the timezone:
 
 ```shell
-date 030222092016
+tzselect
+```
+
+Then use ntp to set sync the time and date:
+
+```shell
+ntpdate pool.ntp.org
 ```
 
 ### Install the stage3 tarball
 
-In order to avoid starting from a Linux from scratch, the Gentoo developers provide us with a Stage 3 which is a base binary semi-working non-bootable environment suitable to save us such an amount of time. To do that we just only need to download it and uncompress in our filesystem tree:
+In order to avoid installing Linux from scratch, the awesome Gentoo developers provide a Stage 3 build, whitch is mainly a **base-binary-semi-working-non-bootable-environment** (no joke :satisfied: ) created to save us tons of time.
+
+What we're going to do, is grabbing that **base-binary-semi-working-non-bootable-environment** and untar it in our Gentoo directory structure. This will create all the necessari binaries and files to start compiling our Gentoo system.
+
+We first download the tarball:
 
 ```shell
-cd /mnt/gentoo
-wget http://mirror.eu.oneandone.net/linux/distributions/gentoo/gentoo/releases/amd64/autobuilds/current-stage3-amd64/stage3-amd64-systemd-20210405T120143Z.tar.xz
+curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://bouncer.gentoo.org/fetch/root/all/releases/amd64/autobuilds/20220501T170547Z/stage3-amd64-systemd-20220501T170547Z.tar.xz
 ```
 
-Unpacking the stage tarball into our local disk:
+And we unpack it in our `/mnt/gentoo` directory:
 
 ```shell
+cd /mnt/gentoo/
 tar xvf stage3-*.tar.xz --xattrs
 ```
 
+At this point we have all files to start setting up own new Gentoo environment.
+
+Now is when our CPU starts panicking :worried:
+
 ### Configuring compile options
 
-As I said, Gentoo is a great Linux distro because its deep customization and portage is its cornerstone.
+I would like to introduce you, `Portage`, Gentoo's cornerstone.
 
-Portage is the Gentoo autobuild system, similar to packing systems like apt, yum or pacman in binary distros. It's inspired by FreeBSD port system. Pre-compiled binaries are also available, but these are out of reach of this guide.
+From Wikipedia:
 
-Wikipedia says:
 > Portage is Gentoo's software distribution and package management system. The original design was based on the ports system used by the Berkeley Software Distribution (BSD) based operating systems. The portage tree contains over 10,000 packages ready for installation in a Gentoo system.
+
+Portage is Gentoo's autobuild system, or basically the package management tool. It will grab the source code of anything we want to install, compile it, and install it in our system for us. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
 
 Portage describe how to build the packages based on CPU architecture Flags and which features are available for every package with what are known as "use flags".
 
