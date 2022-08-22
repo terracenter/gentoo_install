@@ -24,9 +24,9 @@ I've been using Gentoo since 2002 (20+ years already :astonished: ), and what I 
 * Is fun
 * The possibility of getting everything under control
 * Deep customization
-* One learn **a lot** about GNU/Linux from using it
+One learns **a lot**** about GNU/Linux from using it
 
-Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power comes great responsability**. Bear in mind that although Gentoo gives you a lot of flexibility, and ~~insane~~ tremendous amount of customization, and all the benefits I mentioned above, it also requires time, dedication and patiance.
+Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power **comes great **responsibility. Bear in mind that although Gentoo gives you a lot of flexibility, an ~~insane~~ tremendous amount of customization and all the benefits I mentioned above, it also requires time, dedication and patience.
 
 If you are that kind of person, speak *emerge* and enter :sunrise:
 
@@ -42,9 +42,11 @@ If you are that kind of person, speak *emerge* and enter :sunrise:
 
 The first thing we need to install our Gentoo is a live-cd environment with UEFI vars enabled.
 
-I like [systemrescuecd](http://www.system-rescue-cd.org) because is a ~~Gentoo-based~~ Arch-based distro and has UEFI vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick). But it doesn't matter what distro you use as far as it's UEFI compatible.
+~~I like [systemrescuecd](http://www.system-rescue-cd.org) because is Gentoo-based and has UEFI vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick).~~
 
-To make sure that the distro we're using is UEFI compatible, run:
+As systemrescuecd is now based on Arch, we're going to use the Gentoo AdminCD. You can find it on the [Gentoo downloads section](https://www.gentoo.org/downloads/). Scroll to `Advanced choices and other architectures` and get the `Boot media` called **`Admin CD`**.
+
+To make sure that we boot on UEFI mode, by running:
 
 ```shell
 efivar -l
@@ -117,7 +119,7 @@ Number  Start (sector)    End (sector)  Size       Code  Name
 
 Aight, at this point we have the disk partitioned, now we want to create the encrypted container that will enclose the LVM volumes.
 
-To get the best performance of working with encrypted containers, we should use an encryption algorithm that is supported with our CPU. We have to be wise picking up because won't be able to changed it afterwards. Luckily for us, `cryptosetup` is here :ok_hand:
+To get the best performance of working with encrypted containers, we should use an encryption algorithm that is supported by our CPU. We have to be wise in picking up because won't be able to change it afterward. Luckily for us, `cryptosetup` is here :ok_hand:
 
 Run:
 
@@ -151,13 +153,13 @@ PBKDF2-whirlpool  121362 iterations per second for 256-bit key
 
 Choose the option with better overall performance. In the output above would be `aes-xts` and the key size `PBKDF2-sha256`.
 
-When you have yours choosen, then proceed by running:
+When you have yours chosen, then proceed by running:
 
 ```shell
 cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/nvme0n1p2
 ```
 
-The command is going to ask you to confirm with a `YES`. After a second you should see something like: `Command successful`.
+The command is going to ask you to confirm with a `YES`. After a second you should see something like `Command successful``.
 
 Then we need to open (decrypt) the container to start creating the volumes inside.
 
@@ -169,22 +171,22 @@ cryptsetup open --type luks /dev/nvme0n1p2 cryptcontainer
 
 And... we're done with the encryption. Now, volume time! :sound:
 
-### Create lvm volumes
+### Create LVM volumes
 
 | :information_source: Info point                                                                                                                                                      |
 | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | For those of you that are not familiar with this acronym, LVM stands for **L**ogical **V**olume **M**anagement. You can read more about it [here](https://wiki.gentoo.org/wiki/LVM). |
 
-The good thing about logical volumes is that you can modify them at any point. In this example I'm going to create two logical volumes, one for the `root` partition and one for `home`, but feel free to create as many as you want.
+The good thing about logical volumes is that you can modify them at any point. In this example, I'm going to create two logical volumes, one for the `root` partition and one for the `home`, but feel free to create as many as you want.
 
-Also, I'll use the name `vg0` to identifty this volume group. This is a trivial name, so again, be creative :D
+Also, I'll use the name `vg0` to identify this volume group. This is a trivial name, so again, be creative :D
 
 ```shell
 pvcreate /dev/mapper/cryptcontainer
 vgcreate vg0 /dev/mapper/cryptcontainer
 ```
 
-At this point, let's check that what we have if what we want:
+At this point, let's check that what we have is what we want:
 
 ```shell
 vgdisplay
@@ -222,7 +224,7 @@ lvcreate --size 50G vg0 --name root
 lvcreate -l +100%FREE vg0 --name home
 ```
 
-To double check what we've done, run:
+To double-check what we've done, run:
 
 ```shell
 lvdisplay
@@ -270,11 +272,11 @@ If you do, well done :muscle: Let's keep rolling!
 
 ### Create filesystems
 
-Filesystems, so the good thing about Linux is that we've a lot of filesystems that we can use, but this is also the bad thing :sweat_smile: what to choose and when will most probably come to your mind at some point.
+Filesystems, so the good thing about Linux is that we have a lot of filesystems that we can use, but this is also the bad thing :sweat_smile: what to choose and when will most probably come to your mind at some point.
 
 You can read as much as you want [here](https://wiki.gentoo.org/wiki/Filesystem), but we're going to keep it easy, we will use `ext4`, which is the default filesystem for many Linux distributions.
 
-Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how it UEFI works), and them our main `ext4` filesystems:
+Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how UEFI works), and then our main `ext4` filesystems:
 
 ```shell
 mkfs.vfat -F32 /dev/nvme0n1p1
@@ -284,7 +286,7 @@ mkfs.ext4 /dev/mapper/vg0-home
 
 ### Mount the new filesystems
 
-With our logica volumes created and our partitions ready, let's mount our partitions to start building our Gentoo system:
+With our logical volumes created and our partitions ready, let's mount our partitions to start building our Gentoo system:
 
 ```shell
 mkdir /mnt/gentoo
@@ -297,7 +299,7 @@ mount /dev/mapper/vg0-home /mnt/gentoo/home
 
 ## Installing the Gentoo base system
 
-Before installing Gentoo, make sure that the date and time are set correctly. A mis-configured clock may lead to strange results in the future, and you don't want this :)
+Before installing Gentoo, make sure that the date and time are set correctly. A misconfigured clock may lead to strange results in the future, and you don't want this :)
 
 To check our current system date just run:
 
@@ -311,7 +313,7 @@ Select the timezone:
 tzselect
 ```
 
-Then use ntp to set sync the time and date:
+Then use NTP to set sync the time and date:
 
 ```shell
 ntpdate pool.ntp.org
@@ -319,14 +321,14 @@ ntpdate pool.ntp.org
 
 ### Install the stage3 tarball
 
-In order to avoid installing Linux from scratch, the awesome Gentoo developers provide a Stage 3 build, whitch is mainly a **base-binary-semi-working-non-bootable-environment** (no joke :satisfied: ) created to save us tons of time.
+To avoid installing Linux from scratch, the awesome Gentoo developers provide a Stage 3 build, which is mainly a **base-binary-semi-working-non-bootable-environment** (no joke :satisfied: ) created to save us tons of time.
 
-What we're going to do, is grabbing that **base-binary-semi-working-non-bootable-environment** and untar it in our Gentoo directory structure. This will create all the necessari binaries and files to start compiling our Gentoo system.
+What we're going to do, is grab that **base-binary-semi-working-non-bootable-environment**** and untar it in our Gentoo directory structure. This will create all the necessary binaries and files to start compiling our Gentoo system.
 
 We first download the tarball:
 
 ```shell
-curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://bouncer.gentoo.org/fetch/root/all/releases/amd64/autobuilds/20220501T170547Z/stage3-amd64-systemd-20220501T170547Z.tar.xz
+curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://bouncer.gentoo.org/fetch/root/all/releases/amd64/autobuilds/20220821T170533Z/stage3-amd64-systemd-20220821T170533Z.tar.xz
 ```
 
 And we unpack it in our `/mnt/gentoo` directory:
@@ -336,60 +338,104 @@ cd /mnt/gentoo/
 tar xvf stage3-*.tar.xz --xattrs
 ```
 
-At this point we have all files to start setting up own new Gentoo environment.
+At this point, we have all files to start setting up our new Gentoo environment.
 
 Now is when our CPU starts panicking :worried:
 
 ### Configuring compile options
 
-I would like to introduce you, `Portage`, Gentoo's cornerstone.
+I would like to introduce you, to `Portage`, Gentoo's cornerstone.
 
-From Wikipedia:
+For those who don't know (yet), Portage is Gentoo's auto-build system, or the package management tool. It will grab the source code of anything we want to install (from the ebuild definition), compile it (based on CPU architecture Flags and which features are available for every package with what are known as "use flags"), and install it in our system for us. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
 
-> Portage is Gentoo's software distribution and package management system. The original design was based on the ports system used by the Berkeley Software Distribution (BSD) based operating systems. The portage tree contains over 10,000 packages ready for installation in a Gentoo system.
+This might be intimidating for some of you, but no worries, we will take it step by step.
 
-Portage is Gentoo's autobuild system, or basically the package management tool. It will grab the source code of anything we want to install, compile it, and install it in our system for us. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
+And the firsts are the CPU flags. The CPU flags are telling the compiler what are the options natively supported for our CPU, this will make the binaries fitting perfectly our CPU type.
 
-Portage describe how to build the packages based on CPU architecture Flags and which features are available for every package with what are known as "use flags".
+The easiest way is to go to the Gentoo wiki [here](https://wiki.gentoo.org/wiki/Safe_CFLAGS) and check the best `COMMON_FLAGS` to use for your CPU, but if you're interested, you can also do it manually by:
 
-Let's see how to setting up portage with our system CPU flags.
-Run:
+Installing `gcc`:
 
 ```shell
-gcc -c -Q -march=native --help=target | grep march
+pacman -S gcc
 ```
 
-GCC will tell you which architecture have in your system to be set in the portage optimizations flags:
+And run:
+
+```shell
+gcc -c -Q -march=native --help=target | awk '/^  -march=/ {print $2}'
+```
+
+You should see one word, in my case was `skylake`. So basically this is the best CPU flag for my CPU type.
+
+Before setting it, it's worth double checking the value with what is defined in the Gentoo wiki, just in case :)
+
+Now, edit this file:
 
 ```shell
 nano -w /mnt/gentoo/etc/portage/make.conf
 ```
 
-These are mine safest available flags:
+And set the `-march=skylake` (or the type you got) at the beginning of `COMMON_FLAGS` to something like:
 
 ```shell
-CFLAGS="-march=broadwell -O2 -pipe -fomit-frame-pointer"
-CXXFLAGS="${CFLAGS}"
+COMMON_FLAGS="-march=skylake -O2 -pipe"
+CFLAGS="${COMMON_FLAGS}"
+CXXFLAGS="${COMMON_FLAGS}"
+FCFLAGS="${COMMON_FLAGS}"
+FFLAGS="${COMMON_FLAGS}"
 ```
 
-And MAKEOPTS describe how many allowed parallel jobs are available to use by building system. Usually I use the same that my CPU has, but somebody says that *number_of_cpu + 1* is the best option. I don't care
+Now we're going to setup `MAKEOPTS`. `MAKEOPTS` describes the number of parallel jobs going to be used by Portage.
+
+There's always been some discussion on what to set here, but I'm going to follow what the Gentoo wiki recommends [here](https://wiki.gentoo.org/wiki/MAKEOPTS), which is the number of CPU.
+
 We can see how many cores we have running:
 
 ```shell
-grep processor /proc/cpuinfo
-processor       : 0
-processor       : 1
-processor       : 2
-processor       : 3
+lscpu
 ```
 
-Then I set it inside make.conf like:
+We should see something like:
 
 ```shell
-MAKEOPTS="-j4"
+Architecture:            x86_64
+  CPU op-mode(s):        32-bit, 64-bit
+  Address sizes:         36 bits physical, 48 bits virtual
+  Byte Order:            Little Endian
+CPU(s):                  4
+  On-line CPU(s) list:   0-3
+Vendor ID:               GenuineIntel
+  BIOS Vendor ID:        GenuineIntel
+  Model name:            Intel(R) Core(TM) i7-8559U CPU @ 2.70GHz
+    BIOS Model name:       CPU @ 2.7GHz
+    BIOS CPU family:     2
+    CPU family:          6
+    Model:               142
+    Thread(s) per core:  1
+    Core(s) per socket:  4
+    Socket(s):           1
+    Stepping:            10
+    BogoMIPS:            5424.00
+    Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx rdtscp lm constant_tsc nopl xtopology nonstop_tsc cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt ts
+                         c_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single pti fsgsbase tsc_adjust bmi1 avx2 smep bmi2 invpcid rdseed adx smap clflushopt xsaveopt xsavec dtherm arat pln pts
 ```
 
-If you want to know exactly which is the best option here you can read this post to choose your best option [MAKEOPTS=”-j${core} +1″ is NOT the best optimization](https://blogs.gentoo.org/ago/2013/01/14/makeopts-jcore-1-is-not-the-best-optimization/).
+The important line is the `CPU(s):`, which is what we're going to set.
+
+Additionally, to keep the system responsive when we're compiling, the build system supports limiting the maximum load for compilation with the parameter `--load-average`.
+
+Ok, so with all that we've said in this section, let's edit the `make.conf` file again:
+
+```shell
+nano /mnt/gentoo/etc/portage/make.conf
+```
+
+And this time we set `MAKEOPTS`:
+
+```shell
+MAKEOPTS="--jobs 4 --load-average 9"
+```
 
 ### Selecting mirrors
 
