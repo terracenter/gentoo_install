@@ -354,13 +354,7 @@ And the firsts are the CPU flags. The CPU flags are telling the compiler what ar
 
 The easiest way is to go to the Gentoo wiki [here](https://wiki.gentoo.org/wiki/Safe_CFLAGS) and check the best `COMMON_FLAGS` to use for your CPU, but if you're interested, you can also do it manually by:
 
-Installing `gcc`:
-
-```shell
-pacman -S gcc
-```
-
-And run:
+Running:
 
 ```shell
 gcc -c -Q -march=native --help=target | awk '/^  -march=/ {print $2}'
@@ -386,9 +380,9 @@ FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
 ```
 
-Now we're going to setup `MAKEOPTS`. `MAKEOPTS` describes the number of parallel jobs going to be used by Portage.
+Now we're going to set up `MAKEOPTS`. `MAKEOPTS` describes the number of parallel jobs going to be used by Portage.
 
-There's always been some discussion on what to set here, but I'm going to follow what the Gentoo wiki recommends [here](https://wiki.gentoo.org/wiki/MAKEOPTS), which is the number of CPU.
+There's always been some discussion on what to set here, but I'm going to follow what the Gentoo wiki recommends [here](https://wiki.gentoo.org/wiki/MAKEOPTS), which is the number of CPUs.
 
 We can see how many cores we have running:
 
@@ -401,24 +395,45 @@ We should see something like:
 ```shell
 Architecture:            x86_64
   CPU op-mode(s):        32-bit, 64-bit
-  Address sizes:         36 bits physical, 48 bits virtual
+  Address sizes:         39 bits physical, 48 bits virtual
   Byte Order:            Little Endian
-CPU(s):                  4
-  On-line CPU(s) list:   0-3
+CPU(s):                  8
+  On-line CPU(s) list:   0-7
 Vendor ID:               GenuineIntel
-  BIOS Vendor ID:        GenuineIntel
-  Model name:            Intel(R) Core(TM) i7-8559U CPU @ 2.70GHz
-    BIOS Model name:       CPU @ 2.7GHz
-    BIOS CPU family:     2
+  Model name:            11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
     CPU family:          6
-    Model:               142
-    Thread(s) per core:  1
+    Model:               140
+    Thread(s) per core:  2
     Core(s) per socket:  4
     Socket(s):           1
-    Stepping:            10
-    BogoMIPS:            5424.00
-    Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx rdtscp lm constant_tsc nopl xtopology nonstop_tsc cpuid tsc_known_freq pni pclmulqdq ssse3 fma cx16 pcid sse4_1 sse4_2 x2apic movbe popcnt ts
-                         c_deadline_timer aes xsave avx f16c rdrand hypervisor lahf_lm abm 3dnowprefetch invpcid_single pti fsgsbase tsc_adjust bmi1 avx2 smep bmi2 invpcid rdseed adx smap clflushopt xsaveopt xsavec dtherm arat pln pts
+    Stepping:            1
+    CPU max MHz:         4800.0000
+    CPU min MHz:         400.0000
+    BogoMIPS:            5990.40
+    Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq
+                         pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l2 invpcid_single cdp_l2 ssbd ibrs ibpb stib
+                         p ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves sp
+                         lit_lock_detect dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg tme avx512_vpopcntdq rdpid movdiri movdir64b fsrm avx512_vp2intersect md_clear f
+                         lush_l1d arch_capabilities
+Virtualization features:
+  Virtualization:        VT-x
+Caches (sum of all):
+  L1d:                   192 KiB (4 instances)
+  L1i:                   128 KiB (4 instances)
+  L2:                    5 MiB (4 instances)
+  L3:                    12 MiB (1 instance)
+Vulnerabilities:
+  Itlb multihit:         Not affected
+  L1tf:                  Not affected
+  Mds:                   Not affected
+  Meltdown:              Not affected
+  Mmio stale data:       Not affected
+  Retbleed:              Not affected
+  Spec store bypass:     Mitigation; Speculative Store Bypass disabled via prctl and seccomp
+  Spectre v1:            Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+  Spectre v2:            Mitigation; Enhanced IBRS, IBPB conditional, RSB filling
+  Srbds:                 Not affected
+  Tsx async abort:       Not affected
 ```
 
 The important line is the `CPU(s):`, which is what we're going to set.
@@ -434,45 +449,58 @@ nano /mnt/gentoo/etc/portage/make.conf
 And this time we set `MAKEOPTS`:
 
 ```shell
-MAKEOPTS="--jobs 4 --load-average 9"
+MAKEOPTS="--jobs 8 --load-average 9"
 ```
 
 ### Selecting mirrors
 
-Set the best mirrors for your location. Be sure that you have Internet access from your live-cd:
+Gentoo uses the closes mirror to sync the packages index, so it's important to set the best mirrors for your location. Luckily the tool `mirrorselect` is going to do the hard work for us :D
+
+:warning: Make sure that you have Internet access from your live-cd:
 
 ```shell
-mirrorselect -i -o >> /mnt/gentoo/etc/portage/make.conf
+mirrorselect -D -s4 -o >> /mnt/gentoo/etc/portage/make.conf
 ```
+
+If you prefer to choose the mirror by yourself, you can run the following command instead:
+
+```shell
+mirrorselect -i -r -o >> /mnt/gentoo/etc/portage/make.conf
+```
+
+You should now have an entry for `GENTOO_MIRRORS` in `/mnt/gentoo/etc/portage/make.conf`.
 
 ### Configuring the main Gentoo repository
 
-Copy the official repository file and select which you want to use:
+Copy the Gentoo repository configuration file from Portage package:
 
 ```shell
-mkdir /mnt/gentoo/etc/portage/repos.conf
+mkdir -p /mnt/gentoo/etc/portage/repos.conf
 cp /mnt/gentoo/usr/share/portage/config/repos.conf /mnt/gentoo/etc/portage/repos.conf/gentoo.conf
-nano -w /mnt/gentoo/etc/portage/repos.conf/gentoo.conf
 ```
 
 ### Copy DNS info
 
-Copy the dns information from your working live-cd environment:
+Copy the DNS information from your working live-cd environment into the new system to make sure that we will be able to resolve domain names once we switch to it:
 
 ```shell
-cp -L /etc/resolv.conf /mnt/gentoo/etc/
+cp --dereference /etc/resolv.conf /mnt/gentoo/etc/
 ```
 
 ### Mounting the necessary filesystems
 
-In addition to lvm filesystem we created in our local disk, there's other pseudo-filesystems which are created during system boot that are needed to chroot into our new environment:
+In addition to LVM filesystem we created in our local disk, other pseudo-filesystems are created during system boot that is needed to chroot into our new environment:
+
+:warning: If you are setting an environment without `SystemD`, then you don't need to execute the `--make-rslave` lines
 
 ```shell
-mount -t proc proc /mnt/gentoo/proc
+mount --types proc /proc /mnt/gentoo/proc
 mount --rbind /sys /mnt/gentoo/sys
 mount --make-rslave /mnt/gentoo/sys
 mount --rbind /dev /mnt/gentoo/dev
 mount --make-rslave /mnt/gentoo/dev
+mount --bind /run /mnt/gentoo/run
+mount --make-slave /mnt/gentoo/run
 ```
 
 ### Entering the new environment
@@ -481,25 +509,22 @@ Chroot into the new environment:
 
 ```shell
 chroot /mnt/gentoo /bin/bash
+```
+
+```shell
 source /etc/profile
 export PS1="(chroot) $PS1"
 ```
 
-Great! We are now inside our final Gentoo system but we need to bake it a little more time.
+Great! We are inside our Gentoo system :tada: Unfortunately, still needs a little bit more time baking :cake:
+
+Take a deep breath, and let's keep rolling
 
 ### Configuring Portage
 
-Portage consists of two main parts, the ebuild system and emerge. The ebuild system takes care of the actual work of building and installing packages, while emerge provides an interface to ebuild: managing an ebuild repository, resolving dependencies and similar issues.
+Portage does the heavy lifting of repository and package management. Everything from dependency resolution, building source code, and installing the software on our system is done by Portage, using some of the tools that it provides, such as `emerge`.
 
-First we need to synchronize the remote repositories with the local Portage tree to knows what packages are available to be installed.
-
-### Installing a Portage snapshot
-
-Download an snapshot from the remote repositories we defined inside make.conf:
-
-```shell
-emerge-webrsync
-```
+First, we need to synchronize the remote repositories with the local Portage tree to know what packages are available to be installed.
 
 ### Updating the Portage tree
 
@@ -511,7 +536,7 @@ emerge --sync
 
 ### Choosing the right profile
 
-A Portage profile specifies default values for global and per-package USE flags, specifies default values for most variables found in /etc/portage/make.conf, and defines a set of system packages. The profiles are maintained by the Gentoo developers as part of the Portage tree (/usr/portage/profiles).
+A Portage profile specifies default values for global and per-package USE flags, specifies default values for most variables found in /etc/portage/make.conf, and defines a set of system packages. The profiles are maintained by the Gentoo developers as part of the Portage tree (`/usr/portage/profiles`).
 
 List the available profiles:
 
