@@ -23,10 +23,12 @@
     - [Updating the Portage tree](#updating-the-portage-tree)
     - [Choosing the right profile](#choosing-the-right-profile)
     - [Configuring the USE variable](#configuring-the-use-variable)
+    - [Configuring the CPU Flags](#configuring-the-cpu-flags)
+    - [Recompile and update @world](#recompile-and-update-world)
   - [Configuring base system](#configuring-base-system)
+    - [Allow licenses for packages](#allow-licenses-for-packages)
     - [Timezone](#timezone)
     - [Configure locales](#configure-locales)
-    - [Installing Systemd](#installing-systemd)
     - [Configuring Linux kernel](#configuring-linux-kernel)
       - [Installing the sources](#installing-the-sources)
       - [Configuring the modules](#configuring-the-modules)
@@ -609,7 +611,7 @@ quse systemd
 
 And you will have the list of packages that are affected by `systemd`.
 
-| :warning: Reminder                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| :hand: Reminder                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | At this point is normal if you feel overwhelmed. Setting and choosing the right USE flags before installing anything in our system will save us time later on. It's important to remember tho, that the USE flags that we use can always be changed, and if we choose something that we don't want to use anymore, or we did a mistake, we can always change them, and recompile the affected packages. So, relax :relaxed: |
 
@@ -625,47 +627,38 @@ And then run it to select the USE flags with a beautiful user interface :smile: 
 ufed
 ```
 
+| :warning: Required USE flags                                                                                                        |
+| :---------------------------------------------------------------------------------------------------------------------------------- |
+| To make sure that our set up will work as expected we need at least these USE falgs set `cryptsetup`, `lvm` and `lvm2create-initrd` |
+
+
 Once we're done, we can see how many system-wide USE flags we've defined by looking at the `/etc/portage/make.conf` file:
 
 ```shell
 nano -w /etc/portage/make.conf
 ```
 
+| :warning: Don't use this as an example                           |
+| :--------------------------------------------------------------- |
+| These are the USE flags my test system, don't use them for yours |
+
 ```shell
-USE="X aac alsa aspell bash-completion boost branding caps contrib \
-     cpudetection cryptsetup dbus exif filecaps flac gd gpm gstreamer gzip \
-     hardened hddtemp highlight hostname imagemagick int64 introspection \
-     jemalloc jpeg jpeg2k json kdbus kmod kms libav libnotify lm_sensors lz4 \
-     lzma lzo mime mp3 mp4 mpeg nano-syntax networkmanager nss numa ogg \
-     opencl opengl pango pcap pdf pie png pulseaudio python recode samba sdl \
-     seccomp simplexml slang smp sockets sound spell sse sse2 ssh \
-     startup-notification svg systemd tcmalloc theora threads \
-     timezone truetype udisks upnp upnp-av upower usb video vim vim-syntax \
-     vorbis wavpack wayland wayland-compositor wifi xcomposite xfs xft \
-     xinerama xkb xml xmlrpc xorg xpm xrandr xwayland xz zeroconf \
+USE="10bit 12bit 256-color 7zip a-like-o aac aacs aalib acpi aio
+     bash-completion boost branding caps contrib cpu cpudetection cpuid
+     cpuinfo cpuload cryptsetup dbus efi64 gd gzip hardened hddtemp highlight
+     highlighting imagemagick initramfs int64 ipv4 jemalloc jpeg json
+     kmod lm-sensors lvm lvm2create-initrd lz4 lzip lzma lzo lzo2 nano
+     nano-syntax networkmanager nss numa opencl opengl openssl python ssh
+     sslv2 sslv3 startup-notification tcmalloc threaded threads thunderbolt
+     truetype udisks uefi unzip upower usb x264 x265 xfs xv zeroconf
      zsh-completion -cups"
 ```
 
+### Configuring the CPU Flags
 
+USE flags that are available for our system. We could use the advantages of some CPU instructions sets using what is called CPU flags. You can read more in the [Gentoo wiki page](https://wiki.gentoo.org/wiki/CPU_FLAGS_X86).
 
-
-
-
-
-
-The rest of the flags are per package defined inside */etc/portage/package.use/* and here you can choose to set everything inside a file or not, simply arrange them as you like. I created these files (you can get it from this same repository):
-
-```shell
-ls /etc/portage/package.use/
-```
-
-```shell
-admin devel emulation fonts fs games media network office perl system terms themes utils xorg
-```
-
-USE flags are not the only optimizations we want from our portage system. Other flags corresponding to the instruction sets and other features specific to the x86 (amd64) architecture are configured into the variable called CPU_FLAGS_X86.
-
-We can simply use a useful python script to auto-detect which of them we should set. Install *app-portage/cpuinfo2cpuflags*:
+To know what optimizations can we use for our CPU, we're going to use a tool called `cpuid2cpuflags`:
 
 ```shell
 emerge -a app-portage/cpuid2cpuflags
@@ -674,100 +667,117 @@ emerge -a app-portage/cpuid2cpuflags
 And then run it to get those values:
 
 ```shell
-cpuid2cpuflags-x86
+cpuid2cpuflags
 ```
+
+You should see an output like:
 
 ```shell
-CPU_FLAGS_X86="aes avx avx2 fma3 mmx mmxext pni popcnt sse sse2 sse3 sse4_1 sse4_2 ssse3
+CPU_FLAGS_X86: aes avx avx2 avx512f avx512dq avx512cd avx512bw avx512vl avx512vbmi f16c fma3 mmx mmxext pclmul popcnt rdrand sha sse sse2 sse3 sse4_1 sse4_2 ssse3
 ```
 
-Put the output line into */etc/portage/make.conf*
+We have to add this into our `/etc/portage/make.conf` but instead of colon (`:`) we will use this format. CPU flags could be added to `/etc/portage/package.use/` *instead* (with another format), but we will use our beloved :heart: `make.conf` :
 
 ```shell
-cpuinfo2cpuflags-x86 >> /etc/portage/make.conf
+nano /etc/portage/make.conf
 ```
 
-If you would like (and believe me you should) get deeper knowledge of portage system, don't hesitate to read the official documentation [wiki.gentoo.org](https://wiki.gentoo.org/wiki/Portage).
+And we add our CPU_FLAGS_X86 somewhere in the file
+
+```shell
+CPU_FLAGS_X86="aes avx avx2 avx512f avx512dq avx512cd avx512bw avx512vl avx512vbmi f16c fma3 mmx mmxext pclmul popcnt rdrand sha sse sse2 sse3 sse4_1 sse4_2 ssse3"
+```
+
+### Recompile and update @world
+
+After setting up the USE and CPU flags we're ready to re-compile and update all packages that we have installed in our base system before moving forward:
+
+```shell
+emerge --ask --verbose --update --deep --newuse @world
+```
 
 ## Configuring base system
 
-In addition to Portage there's some other options should be configured before the end of the bake :grin:
+In addition to Portage, there're some other options that should be configured before we can take our Gentoo out of the oven :pizza:
+
+### Allow licenses for packages
+
+Each package in our Gentoo system has a definition for what kind of license it uses. Setting up a system-wide variable to tell our system what kind of licenses we accept in our system is crucial to avoid problem when installing `free` or `binary redistributable` packages to get installed automatically without asking us everytime they get installed or updated.
+
+You can read more about Gentoo licenses [here](https://wiki.gentoo.org/wiki/License_groups#Existing_license_groups).
+
+Licenses acceptance is set in our `/etc/portage/make.conf` in the variable `ACCEPT_LICENSE`, like:
+
+```shell
+ACCEPT_LICENSE="-* @FREE @BINARY-REDISTRIBUTABLE"
+```
 
 ### Timezone
 
-Configuring the time zone of our system's clock:
+Set our time zone. We can use the tool `tzselect` to interactibely select our country and will tell us what the value of `/etc/timezone` file should be.
 
 ```shell
-echo "Europe/Berlin" > /etc/timezone
+tzselect
 ```
 
-Next, reconfigure the *sys-libs/timezone-data* package, which will update the /etc/localtime file based on the /etc/timezone entry. The /etc/localtime file is used by the system C library to know the timezone the system is in:
+Take last line from the output and add it to the timezone file like:
 
 ```shell
-emerge --config sys-libs/timezone-data
+ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 ```
 
 ### Configure locales
 
-Locales are a set of information that most programs use for determining country and language specific settings. To set the system locales we need to set it inside:
+Locales are a set of information that most programs use for determin the country and language of your system. Most users would use one or a few locales instead of the hundreds that are available. This could save us compiling time, to avoid compiling all languages available of each package, and space on the filesystem by not installing man pages that we can't understand :)
+
+Edit the `/etc/locale.gen` and uncomment the locale that you are interested for. Make sure you prioritize `UTF-8` locales, because at least one is needed for the build system to work correctly.
 
 ```shell
 nano -w /etc/locale.gen
 ```
 
-And then execute locale-gen to generate all the locales specified in the /etc/locale.gen file and write them to the locale-archive (/usr/lib/locale/locale-archive).
+Now, execute `locale-gen` to generate all locales specified in the previous file, and write them to the locale-archive `/usr/lib/locale/locale-archive`.
 
 ```shell
 locale-gen
 ```
 
-Once done, it is now time to set the system-wide locale settings. Again we use eselect for this, now with the locale module.
+The more locales you select, the slower this proces would be.
+
+To check if the locales you've select are active, run the following commend and see if they are on the list. No worries if there're some locales that you didn't select, that's part of the system.
+
+```shell
+locale -a
+```
+
+Once the locale is available, let's make sure that is the default one used in our system. Again we use `eselect` for this, now with the locale module:
 
 ```shell
 eselect locale list
+```
+
+You should see something like:
+
+```shell
 Available targets for the LANG variable:
   [1]   C
-  [2]   en_US.utf8
+  [2]   C.utf8
   [3]   POSIX
+  [4]   en_US.utf8
+  [5]   C.UTF8 *
   [ ]   (free form)
 ```
 
-Choose which locales would you like to active and then do it manually editing */etc/env.d/02locale* or automatically by:
+Pick what locale would you activate and then run the following command with the number that you want to select:
 
 ```shell
-eselect locale set 2
+eselect locale set 4
 ```
 
 Now reload the environment:
 
 ```shell
 env-update && source /etc/profile && export PS1="(chroot) $PS1"
-```
-
-### Installing Systemd
-
-Before continue we must remove udev and openrc otherwise we've cyclic dependencies in the future:
-
-```shell
-emerge --deselect sys-fs/udev
-emerge --unmerge sys-fs/udev
-```
-
-Also be sure that we don't have nothing related with openrc or systemd as masked package:
-
-```shell
-emerge --deselect sys-apps/openrc
-emerge --unmerge sys-apps/openrc
-rm /etc/portage/package.mask/systemd
-```
-
-Once we have our system prepared it's time to ensure that we have systemd installed with all required USE flags:
-
-```shell
-emerge -a app-portage/gentoolkit
-euse -E cryptsetup systemd gudev dbus
-emerge -a sys-apps/systemd
-emerge -a sys-apps/dbus
 ```
 
 ### Configuring Linux kernel
