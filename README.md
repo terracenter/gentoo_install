@@ -17,26 +17,26 @@
 
 Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian and many others, the software is compiled locally according to the user preferences and optimizations.
 
-The name of Gentoo comes from the penguin species who are the fastest swimming penguin in the world.
+The name Gentoo comes from the penguin species which are known to be the fastest in the world.
 
-I've been using Gentoo since 2002 (20+ years already :astonished: ), and what I like most from Gentoo is:
+I've been using Gentoo since 2002 (20+ years already :astonished: ), and what I like most about Gentoo is:
 
 * Is fun
 * The possibility of getting everything under control
 * Deep customization
-One learns **a lot**** about GNU/Linux from using it
+One learns **a lot** about GNU/Linux from using it
 
-Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power **comes great **responsibility. Bear in mind that although Gentoo gives you a lot of flexibility, an ~~insane~~ tremendous amount of customization and all the benefits I mentioned above, it also requires time, dedication and patience.
+Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power comes great responsibility**. Bear in mind that although Gentoo gives you a lot of flexibility and a tremendous amount of customization, it also requires time, dedication and patience.
 
 If you are that kind of person, speak *emerge* and enter :sunrise:
 
-| :warning: Disclaimer                                                                                                                                                                         |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| This guide is intended to be a learning experience, and even if you can copy & paste all commands, I will try to explain all steps to give you an understanding of what we're doing and why. |
+| :warning: Disclaimer                                                                                                                              |
+| :------------------------------------------------------------------------------------------------------------------------------------------------ |
+| This guide is intended to be a learning experience, and I will try to explain all steps to give you an understanding of what we're doing and why. |
 
 ## Installation concerns
 
-> Stop before further reading. It's important to know that this guide only contemplates an installation with UEFI, crypt/luks disk, lvm partitioning, and systemd init system. Please remember that if you want a different setup, don't take this as a how-to but more as a general guideline.
+> Stop before further reading. It's important to know that this guide only contemplates an installation with UEFI, crypt/luks disk, lvm partitioning, and systemd init system. Please remember that if you want a different setup, don't take this guide like a step-by-step but more as a general guideline.
 
 ## Start live-cd environment
 
@@ -44,7 +44,7 @@ The first thing we need to install our Gentoo is a live-cd environment with UEFI
 
 ~~I like [systemrescuecd](http://www.system-rescue-cd.org) because is Gentoo-based and has UEFI vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick).~~
 
-As systemrescuecd is now based on Arch, we're going to use the Gentoo AdminCD. You can find it on the [Gentoo downloads section](https://www.gentoo.org/downloads/). Scroll to `Advanced choices and other architectures` and get the `Boot media` called **`Admin CD`**.
+As [systemrescuecd](http://www.system-rescue-cd.org) is now based on Arch, we're going to use the Gentoo LiveGUI USB Image. You can find it in the [Gentoo downloads section](https://www.gentoo.org/downloads/). Scroll to `Advanced choices and other architectures` and get the `Boot media` called ` LiveGUI USB Image`.
 
 To make sure that we boot on UEFI mode, by running:
 
@@ -83,7 +83,7 @@ o (Create a new empty GUID partition table (GPT))
 Proceed? Y
 ```
 
-Now that we have the disk empty, we're going to create some new partitions. The standard partition schema would be a partition for EFI, a partition for SWAP, and one or more for the system. I'm not going to create a partition for SWAP because I have enough RAM to handle the load of the system, but feel free to create one for your needs.
+Now that we've got the disk wiped, we're going to create some new partitions. The standard partition schema would be a partition for EFI, a partition for SWAP, and one or more for the system. I'm not going to create a partition for SWAP because I have enough RAM to handle the load of the system, but feel free to create one for your needs.
 
 ```shell
 n (Add a new partition)
@@ -96,7 +96,7 @@ n (Add a new partition)
 Partition number 2
 First sector 1050624 (default)
 Last sector (press Enter to use remaining disk)
-Hex code 8e00
+Hex code 8E00
 ```
 
 Now, apply the changes to the disk and quit:
@@ -115,9 +115,18 @@ Number  Start (sector)    End (sector)  Size       Code  Name
    2         1050624       500118158   238.0 GiB   8300  LVM
 ```
 
+Or in the case of NVME:
+
+```shell
+gdisk -l dev/nvme0n1
+Number  Start (sector)    End (sector)  Size       Code  Name
+   1            2048         1050623   512.0 MiB   EF00  EFI
+   2         1050624       500118158   238.0 GiB   8300  LVM
+```
+
 ### Prepare encrypted container
 
-Aight, at this point we have the disk partitioned, now we want to create the encrypted container that will enclose the LVM volumes.
+At this point we have the disk partitioned, now we want to create the encrypted container that will enclose the LVM volumes.
 
 To get the best performance of working with encrypted containers, we should use an encryption algorithm that is supported by our CPU. We have to be wise in picking up because won't be able to change it afterward. Luckily for us, `cryptosetup` is here :ok_hand:
 
@@ -131,24 +140,26 @@ You should see something like this:
 
 ```shell
 # Tests are approximate using memory only (no storage IO).
-PBKDF2-sha1       306601 iterations per second for 256-bit key
-PBKDF2-sha256     352818 iterations per second for 256-bit key
-PBKDF2-sha512      94568 iterations per second for 256-bit key
-PBKDF2-ripemd160  227951 iterations per second for 256-bit key
-PBKDF2-whirlpool  121362 iterations per second for 256-bit key
-#  Algorithm | Key |  Encryption |  Decryption
-     aes-cbc   128b   604.2 MiB/s  2515.2 MiB/s
- serpent-cbc   128b    83.8 MiB/s   517.0 MiB/s
- twofish-cbc   128b   180.3 MiB/s   333.7 MiB/s
-     aes-cbc   256b   449.5 MiB/s  1934.8 MiB/s
- serpent-cbc   256b    85.8 MiB/s   516.9 MiB/s
- twofish-cbc   256b   183.2 MiB/s   332.8 MiB/s
-     aes-xts   256b  2110.6 MiB/s  2052.8 MiB/s
- serpent-xts   256b   518.3 MiB/s   502.5 MiB/s
- twofish-xts   256b   323.0 MiB/s   328.5 MiB/s
-     aes-xts   512b  1677.8 MiB/s  1601.8 MiB/s
- serpent-xts   512b   518.9 MiB/s   502.4 MiB/s
- twofish-xts   512b   322.6 MiB/s   327.4 MiB/s
+PBKDF2-sha1      3355443 iterations per second for 256-bit key
+PBKDF2-sha256    5447148 iterations per second for 256-bit key
+PBKDF2-sha512    2068197 iterations per second for 256-bit key
+PBKDF2-ripemd160 1182160 iterations per second for 256-bit key
+PBKDF2-whirlpool  784862 iterations per second for 256-bit key
+argon2i      10 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
+argon2id     10 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
+#     Algorithm |       Key |      Encryption |      Decryption
+        aes-cbc        128b      1876.9 MiB/s      7495.4 MiB/s
+    serpent-cbc        128b       113.2 MiB/s       816.2 MiB/s
+    twofish-cbc        128b       283.5 MiB/s       516.3 MiB/s
+        aes-cbc        256b      1431.1 MiB/s      5949.0 MiB/s
+    serpent-cbc        256b       114.3 MiB/s       816.3 MiB/s
+    twofish-cbc        256b       284.0 MiB/s       516.4 MiB/s
+        aes-xts        256b      6022.2 MiB/s      6000.8 MiB/s
+    serpent-xts        256b       767.7 MiB/s       728.6 MiB/s
+    twofish-xts        256b       475.3 MiB/s       481.8 MiB/s
+        aes-xts        512b      5261.2 MiB/s      5233.4 MiB/s
+    serpent-xts        512b       776.3 MiB/s       729.4 MiB/s
+    twofish-xts        512b       477.6 MiB/s       480.9 MiB/s
 ```
 
 Choose the option with better overall performance. In the output above would be `aes-xts` and the key size `PBKDF2-sha256`.
@@ -159,7 +170,7 @@ When you have yours chosen, then proceed by running:
 cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/nvme0n1p2
 ```
 
-The command is going to ask you to confirm with a `YES`. After a second you should see something like `Command successful``.
+The command is going to ask you to confirm with a `YES`. After a second you should see something like `Command successful`.
 
 Then we need to open (decrypt) the container to start creating the volumes inside.
 
@@ -173,9 +184,9 @@ And... we're done with the encryption. Now, volume time! :sound:
 
 ### Create LVM volumes
 
-| :information_source: Info point                                                                                                                                                      |
-| :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| For those of you that are not familiar with this acronym, LVM stands for **L**ogical **V**olume **M**anagement. You can read more about it [here](https://wiki.gentoo.org/wiki/LVM). |
+| :information_source: Info point                                                                                                                                              |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| For those of you that are not familiar with this acronym, LVM stands for **Logical Volume Management**. You can read more about it [here](https://wiki.gentoo.org/wiki/LVM). |
 
 The good thing about logical volumes is that you can modify them at any point. In this example, I'm going to create two logical volumes, one for the `root` partition and one for the `home`, but feel free to create as many as you want.
 
@@ -185,6 +196,14 @@ Also, I'll use the name `vg0` to identify this volume group. This is a trivial n
 pvcreate /dev/mapper/cryptcontainer
 vgcreate vg0 /dev/mapper/cryptcontainer
 ```
+
+If running the previous commands you see some warnings like:
+
+```shell
+WARNING: Failed to connect to lvmetad. Falling back to device scanning.
+```
+
+It's fine as long as you see a `Physical volume "/dev/mapper/cryptcontainer" successfully created.` following.
 
 At this point, let's check that what we have is what we want:
 
@@ -237,46 +256,46 @@ You should see something like:
   LV Path                /dev/vg0/root
   LV Name                root
   VG Name                vg0
-  LV UUID                k9q9df-vWcJ-skpB-ISYI-SAE6-ux0i-igalqG
+  LV UUID                ggiZPZ-ygBQ-0fxR-oiXN-qLjC-KDOm-phY1ip
   LV Write Access        read/write
-  LV Creation host, time sysrescue, 2022-05-07 17:17:04 +0000
+  LV Creation host, time livecd, 2022-08-26 09:35:21 +0000
   LV Status              available
   # open                 0
-  LV Size                20.00 GiB
-  Current LE             5120
+  LV Size                50.00 GiB
+  Current LE             12800
   Segments               1
   Allocation             inherit
   Read ahead sectors     auto
   - currently set to     256
-  Block device           254:1
+  Block device           253:0
 
   --- Logical volume ---
   LV Path                /dev/vg0/home
   LV Name                home
   VG Name                vg0
-  LV UUID                JKx6lV-dcsx-Yi8c-BnE2-z3Dn-kCl0-VRB70T
+  LV UUID                PZwAiM-kbw5-Cq1y-63xY-nApf-VEms-t31rJI
   LV Write Access        read/write
-  LV Creation host, time sysrescue, 2022-05-07 17:17:09 +0000
+  LV Creation host, time livecd, 2022-08-26 09:35:32 +0000
   LV Status              available
   # open                 0
-  LV Size                43.48 GiB
-  Current LE             11131
+  LV Size                1.77 TiB
+  Current LE             464003
   Segments               1
   Allocation             inherit
   Read ahead sectors     auto
   - currently set to     256
-  Block device           254:2
+  Block device           253:1
 ```
 
 If you do, well done :muscle: Let's keep rolling!
 
 ### Create filesystems
 
-Filesystems, so the good thing about Linux is that we have a lot of filesystems that we can use, but this is also the bad thing :sweat_smile: what to choose and when will most probably come to your mind at some point.
+The good thing about Linux is that we have a lot of filesystems that we can use, but this is also the bad thing :sweat_smile: "what to choose" and "when" will most probably come to your mind at some point.
 
 You can read as much as you want [here](https://wiki.gentoo.org/wiki/Filesystem), but we're going to keep it easy, we will use `ext4`, which is the default filesystem for many Linux distributions.
 
-Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how UEFI works), and then our main `ext4` filesystems:
+Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how UEFI works), and then our main `ext4` filesystems. If you've created more volumes, remember to create a filesystem for all of them:
 
 ```shell
 mkfs.vfat -F32 /dev/nvme0n1p1
@@ -286,10 +305,10 @@ mkfs.ext4 /dev/mapper/vg0-home
 
 ### Mount the new filesystems
 
-With our logical volumes created and our partitions ready, let's mount our partitions to start building our Gentoo system:
+With our logical volumes created and our filesystems ready, let's mount our partitions to start building our Gentoo system:
 
 ```shell
-mkdir /mnt/gentoo
+mkdir -p /mnt/gentoo
 mount /dev/mapper/vg0-root /mnt/gentoo
 mkdir -p /mnt/gentoo/boot
 mount /dev/nvme0n1p1 /mnt/gentoo/boot
@@ -323,7 +342,7 @@ ntpdate pool.ntp.org
 
 To avoid installing Linux from scratch, the awesome Gentoo developers provide a Stage 3 build, which is mainly a **base-binary-semi-working-non-bootable-environment** (no joke :satisfied: ) created to save us tons of time.
 
-What we're going to do, is grab that **base-binary-semi-working-non-bootable-environment**** and untar it in our Gentoo directory structure. This will create all the necessary binaries and files to start compiling our Gentoo system.
+What we're going to do, is grab that **base-binary-semi-working-non-bootable-environment**, untar it into our Gentoo directory structure. This will create all the necessary binaries and files to start compiling our Gentoo system.
 
 We first download the tarball:
 
@@ -331,7 +350,7 @@ We first download the tarball:
 curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://bouncer.gentoo.org/fetch/root/all/releases/amd64/autobuilds/20220821T170533Z/stage3-amd64-systemd-20220821T170533Z.tar.xz
 ```
 
-And we unpack it in our `/mnt/gentoo` directory:
+And we unpack it in our root directory that is mounted in `/mnt/gentoo` directory:
 
 ```shell
 cd /mnt/gentoo/
@@ -344,9 +363,9 @@ Now is when our CPU starts panicking :worried:
 
 ### Configuring compile options
 
-I would like to introduce you, to `Portage`, Gentoo's cornerstone.
+I would like to introduce you to `Portage`, Gentoo's cornerstone.
 
-For those who don't know (yet), Portage is Gentoo's auto-build system, or the package management tool. It will grab the source code of anything we want to install (from the ebuild definition), compile it (based on CPU architecture Flags and which features are available for every package with what are known as "use flags"), and install it in our system for us. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
+For those who don't know (yet), Portage is Gentoo's auto-build system, or the package management tool. It will grab the source code of anything we want to install (defined in the ebuild file), compile it (based on CPU architecture Flags and which features are available for every package with what are known as "use flags"), and install it in our system. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
 
 This might be intimidating for some of you, but no worries, we will take it step by step.
 
@@ -360,7 +379,7 @@ Running:
 gcc -c -Q -march=native --help=target | awk '/^  -march=/ {print $2}'
 ```
 
-You should see one word, in my case was `skylake`. So basically this is the best CPU flag for my CPU type.
+You should see one word, in my case was `tigerlake`. So basically this is the best CPU flag for my CPU type.
 
 Before setting it, it's worth double checking the value with what is defined in the Gentoo wiki, just in case :)
 
@@ -370,10 +389,10 @@ Now, edit this file:
 nano -w /mnt/gentoo/etc/portage/make.conf
 ```
 
-And set the `-march=skylake` (or the type you got) at the beginning of `COMMON_FLAGS` to something like:
+And set the `-march=tigerlake` (or the type you got) at the beginning of `COMMON_FLAGS` to something like:
 
 ```shell
-COMMON_FLAGS="-march=skylake -O2 -pipe"
+COMMON_FLAGS="-march=tigerlake -O2 -pipe"
 CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS}"
 FCFLAGS="${COMMON_FLAGS}"
@@ -382,65 +401,17 @@ FFLAGS="${COMMON_FLAGS}"
 
 Now we're going to set up `MAKEOPTS`. `MAKEOPTS` describes the number of parallel jobs going to be used by Portage.
 
-There's always been some discussion on what to set here, but I'm going to follow what the Gentoo wiki recommends [here](https://wiki.gentoo.org/wiki/MAKEOPTS), which is the number of CPUs.
+There's always been some discussion on what to set here, but I'm going to follow what the Gentoo wiki recommends [here](https://wiki.gentoo.org/wiki/MAKEOPTS), which is: `less than or equal to the minimum of the size of RAM/2GB or CPU thread count`.
 
-We can see how many cores we have running:
-
-```shell
-lscpu
-```
-
-We should see something like:
+We will use the number of CPU threads by running:
 
 ```shell
-Architecture:            x86_64
-  CPU op-mode(s):        32-bit, 64-bit
-  Address sizes:         39 bits physical, 48 bits virtual
-  Byte Order:            Little Endian
-CPU(s):                  8
-  On-line CPU(s) list:   0-7
-Vendor ID:               GenuineIntel
-  Model name:            11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
-    CPU family:          6
-    Model:               140
-    Thread(s) per core:  2
-    Core(s) per socket:  4
-    Socket(s):           1
-    Stepping:            1
-    CPU max MHz:         4800.0000
-    CPU min MHz:         400.0000
-    BogoMIPS:            5990.40
-    Flags:               fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq
-                         pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l2 invpcid_single cdp_l2 ssbd ibrs ibpb stib
-                         p ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves sp
-                         lit_lock_detect dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg tme avx512_vpopcntdq rdpid movdiri movdir64b fsrm avx512_vp2intersect md_clear f
-                         lush_l1d arch_capabilities
-Virtualization features:
-  Virtualization:        VT-x
-Caches (sum of all):
-  L1d:                   192 KiB (4 instances)
-  L1i:                   128 KiB (4 instances)
-  L2:                    5 MiB (4 instances)
-  L3:                    12 MiB (1 instance)
-Vulnerabilities:
-  Itlb multihit:         Not affected
-  L1tf:                  Not affected
-  Mds:                   Not affected
-  Meltdown:              Not affected
-  Mmio stale data:       Not affected
-  Retbleed:              Not affected
-  Spec store bypass:     Mitigation; Speculative Store Bypass disabled via prctl and seccomp
-  Spectre v1:            Mitigation; usercopy/swapgs barriers and __user pointer sanitization
-  Spectre v2:            Mitigation; Enhanced IBRS, IBPB conditional, RSB filling
-  Srbds:                 Not affected
-  Tsx async abort:       Not affected
+lscpu | awk '/^CPU\(s\):/ {print $2}'
 ```
-
-The important line is the `CPU(s):`, which is what we're going to set.
 
 Additionally, to keep the system responsive when we're compiling, the build system supports limiting the maximum load for compilation with the parameter `--load-average`.
 
-Ok, so with all that we've said in this section, let's edit the `make.conf` file again:
+With all that we've said in this section, let's edit the `make.conf` file again:
 
 ```shell
 nano /mnt/gentoo/etc/portage/make.conf
@@ -460,12 +431,6 @@ Gentoo uses the closes mirror to sync the packages index, so it's important to s
 
 ```shell
 mirrorselect -D -s4 -o >> /mnt/gentoo/etc/portage/make.conf
-```
-
-If you prefer to choose the mirror by yourself, you can run the following command instead:
-
-```shell
-mirrorselect -i -r -o >> /mnt/gentoo/etc/portage/make.conf
 ```
 
 You should now have an entry for `GENTOO_MIRRORS` in `/mnt/gentoo/etc/portage/make.conf`.
@@ -491,7 +456,7 @@ cp --dereference /etc/resolv.conf /mnt/gentoo/etc/
 
 In addition to LVM filesystem we created in our local disk, other pseudo-filesystems are created during system boot that is needed to chroot into our new environment:
 
-:warning: If you are setting an environment without `SystemD`, then you don't need to execute the `--make-rslave` lines
+:warning: If you are setting an environment without `SystemD`, then you can skip the `--make-rslave` lines
 
 ```shell
 mount --types proc /proc /mnt/gentoo/proc
@@ -528,7 +493,7 @@ First, we need to synchronize the remote repositories with the local Portage tre
 
 ### Updating the Portage tree
 
-Then update the snapshot with the latest version of the repos:
+Then update the snapshot with the latest version of the repository:
 
 ```shell
 emerge --sync
@@ -536,7 +501,7 @@ emerge --sync
 
 ### Choosing the right profile
 
-A Portage profile specifies default values for global and per-package USE flags, specifies default values for most variables found in /etc/portage/make.conf, and defines a set of system packages. The profiles are maintained by the Gentoo developers as part of the Portage tree (`/usr/portage/profiles`).
+A Portage profile specifies default values for global and per-package USE flags, specifies default values for most variables found in `/etc/portage/make.conf`, and defines a set of system packages. The profiles are maintained by the Gentoo developers as part of the Portage tree.
 
 List the available profiles:
 
@@ -544,54 +509,67 @@ List the available profiles:
 eselect profile list
 ```
 
-From the output list we must select our best fitting option. Once our system is based on systemd, the best profile we can choose is the *systemd*. Of course we can choose others like Gnome which needs systemd to run, but we want a minimal environment to be configured.
+From the output list, we must select our best fitting option. Because the system we're building is based on SystemD, the best profile we can choose is the `systemd`. Of course, we can choose any other that has `systemd` in it, like `default/linux/amd64/17.0/desktop/gnome/systemd`, but we want a minimal environment to be configured.
 
 ```shell
 [..]
-[12]  default/linux/amd64/13.0/systemd
+[17]  default/linux/amd64/17.1/systemd (stable) *
 [..]
 ```
 
-Choose the profile with eselect utility:
+This should be the default profile selected as we can tell for the `*` at the end. But if not, make sure you select it with `eselect`:
 
 ```shell
-eselect profile set 12
+eselect profile set 17 # or the number that you have on your list
 ```
 
 ### Configuring the USE variable
 
-As we said [USE flags](https://wiki.gentoo.org/wiki/USE_flag) are a core feature of Gentoo, and a good understanding of how to deal with them is needed for administering a Gentoo system.
+As we said, [USE flags](https://wiki.gentoo.org/wiki/USE_flag) are a core feature of Gentoo. A good understanding of how to deal with them is needed to have a customized and healthy Gentoo system.
 
-The USE variable allows the system wide setting or deactivation of USE flags in a space separated list while are set inside [/etc/portage/make.conf](https://wiki.gentoo.org/wiki//etc/portage/make.conf#USE) or for better fine grained per package control we should set them inside [/etc/portage/package.use](https://wiki.gentoo.org/wiki//etc/portage/package.use).
+The USE variables can be defined `system-wide` or `per package` domain. You can read more info here:
 
-If we use tools like *ufed* we can easelly set system wide Flags since I prefer to choose it manually to set per package defined Flags and use as minimum as possible as system-wide. So, if you choose the easy/system-wide way simply install ufed with:
+- System-wide in [/etc/portage/make.conf](https://wiki.gentoo.org/wiki//etc/portage/make.conf#USE)
+- Per package in [/etc/portage/package.use](https://wiki.gentoo.org/wiki//etc/portage/package.use)
+
+We can see the list of USE flags that are currently set up in our system by running:
+
+```shell
+emerge --info | grep ^USE
+```
+
+Don't get scared by the list, you will most probably increase this once we finish with this section.
+
+We can find a description of all USE flags in `less /var/db/repos/gentoo/profiles/use.desc`.
+
+
+Additionally, the utility named `quse` from `portage-utils` package can tell us which package uses what USE flags.
+
+For example, if you want to know which packages use the `systemd` flag we simply need to run:
+
+```shell
+quse systemd
+```
+
+And you will have the list of packages that are affected by `systemd`.
+
+| :warning: Reminder                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| At this point is normal if you feel overwhelmed. Setting and choosing the right USE flags before installing anything in our system will save us time later on. It's important to remember tho, that the USE flags that we use can always be changed, and if we choose something that we don't want to use anymore, or we did a mistake, we can always change them, and recompile the affected packages. So, relax :relaxed: |
+
+Said that we're going to use a tool called `ufed` that will help use-setting the USE flags that we want in any domain that we want.
 
 ```shell
 emerge ufed
 ```
 
-And then run it to select the USE Flag with a beautiful user interface :smile:
+And then run it to select the USE flags with a beautiful user interface :smile: This step will take some time, so let's grab a :tea: or :coffee: and let's do it!
 
 ```shell
 ufed
 ```
 
-If you, like me, want to get everything under control, then you would love an utility named *quse* from *portage-utils* package. This utility tell us which package use any specified flag.
-For example, if you want to know which packages use the *dbus* flag we simply need to run:
-
-```shell
-quse dbus
-```
-
-And all packages will be shown to us.
-
-Ok, nothing better than test it by ourself!
-
-```shell
-emerge -a app-portage/portage-utils
-```
-
-These are the system wide USE Flags described in my make.conf file:
+Once we're done, we can see how many system-wide USE flags we've defined by looking at the `/etc/portage/make.conf` file:
 
 ```shell
 nano -w /etc/portage/make.conf
@@ -611,6 +589,13 @@ USE="X aac alsa aspell bash-completion boost branding caps contrib \
      xinerama xkb xml xmlrpc xorg xpm xrandr xwayland xz zeroconf \
      zsh-completion -cups"
 ```
+
+
+
+
+
+
+
 
 The rest of the flags are per package defined inside */etc/portage/package.use/* and here you can choose to set everything inside a file or not, simply arrange them as you like. I created these files (you can get it from this same repository):
 
@@ -657,7 +642,7 @@ In addition to Portage there's some other options should be configured before th
 Configuring the time zone of our system's clock:
 
 ```shell
-echo "Europe/Madrid" > /etc/timezone
+echo "Europe/Berlin" > /etc/timezone
 ```
 
 Next, reconfigure the *sys-libs/timezone-data* package, which will update the /etc/localtime file based on the /etc/timezone entry. The /etc/localtime file is used by the system C library to know the timezone the system is in:
