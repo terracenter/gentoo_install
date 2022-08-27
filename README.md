@@ -30,7 +30,10 @@
     - [Timezone](#timezone)
     - [Configure locales](#configure-locales)
     - [Configuring Linux kernel](#configuring-linux-kernel)
+      - [Installing external firmware](#installing-external-firmware)
       - [Installing the sources](#installing-the-sources)
+        - [Manual set up](#manual-set-up)
+        - [Automatic set up](#automatic-set-up)
       - [Configuring the modules](#configuring-the-modules)
       - [Installing firmware](#installing-firmware)
     - [LVM Configuration](#lvm-configuration)
@@ -661,7 +664,7 @@ USE flags that are available for our system. We could use the advantages of some
 To know what optimizations can we use for our CPU, we're going to use a tool called `cpuid2cpuflags`:
 
 ```shell
-emerge -a app-portage/cpuid2cpuflags
+emerge --ask app-portage/cpuid2cpuflags
 ```
 
 And then run it to get those values:
@@ -782,9 +785,9 @@ env-update && source /etc/profile && export PS1="(chroot) $PS1"
 
 ### Configuring Linux kernel
 
-While Portage is the core of Gentoo Linux system the Linux kernel is the core of the operating system and offers an interface for programs to access the hardware. The kernel contains most of the device drivers.
+While Portage is the core of Gentoo Linux system, the Linux kernel is the core of the operating system. this last offers an interface for programs to access the hardware via the modules aka drivers.
 
-To create a kernel, it is necessary to install the kernel source code first. The Gentoo recommended kernel sources for a desktop system are, of course, sys-kernel/gentoo-sources. These are maintained by the Gentoo developers, and patched to fix security vulnerabilities, functional problems, as well as to improve compatibility with rare system architectures. But as always in Gentoo there's other options also available.
+To create a binary of the kernel, it is necessary to install the kernel source code first. Gentoo's recomandation is, of course, the kernel package called `sys-kernel/gentoo-sources`. Is maintained by the Gentoo team, and patched to fix security vulnerabilities, functionality problems, as well as to improve compatibility with rare system architectures. But, as always, there're many other options available.
 
 To get a full list of kernel sources with short descriptions can be found by searching with emerge:
 
@@ -792,27 +795,96 @@ To get a full list of kernel sources with short descriptions can be found by sea
 emerge --search sources
 ```
 
-#### Installing the sources
+#### Installing external firmware
 
-Let's install the gentoo-sources:
+Linux kernel is an opensource project, but some hardware manufacturers don't like the idea of open-source the code of it's firmware (or modules) and they release a compiled binary version of them. These binaris can't be included in the Linux kernel repository, and they are all packed in a package called `sys-kernel/linux-firmware`.
+
+So, prior to compile the kernel, it is important to know that, first, some devices require additional firmware to make the system run properly, and second, these are more common that we think. From network adapters, wireless card, graphic cards, even CPUs.
+
+For the most common firmware requirements we will install the `sys-kernel/linux-firmware`:
 
 ```shell
-emerge -a sys-kernel/gentoo-sources
+emerge --ask sys-kernel/linux-firmware
 ```
 
-Now it is time to configure and compile the kernel sources. There are two approaches to do that job:
+Additionally, check the [Microocode page](https://wiki.gentoo.org/wiki/Microcode) in the Gentoo wiki to see if you need any additional firmware to make your CPU work properly. As an example, for intel CPUs is usually required to install the intel microcode package `sys-firmware/intel-microcode`.
 
-1. The kernel is manually built and install.
-2. A tool called genkernel is used to automatically build and install the Linux kernel.
+#### Installing the sources
 
-In both cases we must configure it manually that normally is the most difficult procedure a Linux user ever has to perform. Nothing is less true - after configuring a couple of kernels no-one even remembers that it was difficult :wink:
-
-So I'll explain how to use genkernel which help us to maintain config files and some more automations :smiley:
-
-However, one thing is true: it is vital to know the system when a kernel is configured manually. Start by install required packages:
+We're not going to get "too crazy" and install Zen kernel (my favourite). We will install the default Gentoo kernel:
 
 ```shell
-emerge -a sys-apps/pciutils sys-kernel/genkernel
+emerge --ask sys-kernel/gentoo-sources
+```
+
+Once installed we have to select what kernel do we want our system to use by using our magic wand `eselect` :zap:
+
+```shell
+eselect kernel list
+```
+
+You will probably see only one kernel on the list:
+
+```shell
+Available kernel symlink targets:
+  [1]   linux-5.15.59-gentoo
+```
+
+So we go with that:
+
+```shell
+eselect kernel set 1
+```
+
+What this actually does is create a symlink `/usr/src/linux` to point to `/usr/src/linux-5.15.59-gentoo`
+
+From this point there're only two things missing: configure and compile it. There are two ways to do that:
+
+1. Manual configuration and automated build
+2. Everything automated by using `genkernel`
+
+##### Manual set up
+
+The manual process it's intimidating for beginners, because you can break your system if you miss certain options. There's a lof of reading and digging involved in the process.
+
+As much as I would love to spend time explaining every single option of the Kernel, doing so will be time consuming and at least double the size of this guide :bangbang:
+
+So, if you feel brave I will give you some hints:
+
+1. Install `sys-apps/pciutils`. This package contains a tool calles `lspci` that you will use to identify what pci hardware you have in your system. You will have to enable all drivers on the kernel.
+
+```shell
+emerge --ask sys-apps/pciutils
+```
+
+2. Install `sys-kernel/dracut`. This package will help you creating an `initrmfs` (Init Ram Filesystem) with the required tools to make the kernel bootable:
+
+```shell
+emerge --ask sys-kernel/dracut
+```
+
+3. Configure the kernel by running `make menuconfig` inside `/usr/src/linux`:
+
+```shell
+cd /usr/src/linux
+make menuconfig
+```
+
+4. After the required options are activated either as module or part of the kernel binary, compile the kernel, the modules, and install them by:
+
+```shell
+make && make modules_install
+make install
+```
+
+##### Automatic set up
+
+For those who prefer a pleasant initial experience, I'll explain how to use `genkernel`.
+
+What `genkernel` really does is configuring a generic kernel that works with most of the hardware. Like the LiveCD that we're using does.
+
+```shell
+emerge --ask sys-kernel/genkernel
 ```
 
 Edit */etc/genkernel.conf* to set our preferences:
@@ -873,7 +945,7 @@ find /lib/modules/<kernel version>/ -type f -iname '*.o' -or -iname '*.ko' | les
 Some drivers require additional firmware to be installed on the system before they work. This is often the case for network interfaces, especially wireless network interfaces. Most of the firmware is packaged in *sys-kernel/linux-firmware*, so installing them are almost needed in a laptop system:
 
 ```shell
-emerge -a sys-kernel/linux-firmware
+emerge --ask sys-kernel/linux-firmware
 ```
 
 ### LVM Configuration
@@ -881,7 +953,7 @@ emerge -a sys-kernel/linux-firmware
 Install lvm tools if it's not yet installed:
 
 ```shell
-emerge -a sys-fs/lvm2
+emerge --ask sys-fs/lvm2
 ```
 
 Then edit the package configurations:
@@ -944,7 +1016,7 @@ It is simple to configure, but can only start EFI executables, such as the Linux
 Before installing the EFI binaries we need to check if EFI variables are accessible:
 
 ```shell
-emerge -a sys-libs/efivar
+emerge --ask sys-libs/efivar
 efivar -l
 ```
 
@@ -1000,7 +1072,7 @@ Efibootmgr is not a bootloader itself it's a tool that interacts with the EFI fi
 First we need to install the package:
 
 ```shell
-emerge -a sys-boot/efibootmgr
+emerge --ask sys-boot/efibootmgr
 ```
 
 To list the current boot entries:
@@ -1103,7 +1175,7 @@ systemctl start systemd-networkd.service
 Often NetworkManager is used to configure network settings. I personally use nmtui because it's easy and has a ncurses client. Just install it:
 
 ```shell
-emerge -a networkmanager
+emerge --ask networkmanager
 ```
 
 And now simply run the following command and follow a guided configuration process through nmtui:
@@ -1180,7 +1252,7 @@ FallbackNTP=0.gentoo.pool.ntp.org 1.gentoo.pool.ntp.org 2.gentoo.pool.ntp.org 3.
 In order to index the file system to provide faster file location capabilities we will install sys-apps/mlocate:
 
 ```shell
-emerge -a sys-apps/mlocate
+emerge --ask sys-apps/mlocate
 ```
 
 To keep databse update we need to run `updatedb` often.
@@ -1190,7 +1262,7 @@ To keep databse update we need to run `updatedb` often.
 Additional to the tools for managing ext2, ext3, or ext4 filesystems (sys-fs/e2fsprogs) which are already installed as a part of the *@system* set I like to install other filesystem utilities like VFAT, XFS, NTFS and so on:
 
 ```shell
-emerge -a sys-fs/xfsprogs sys-fs/exfat-utils sys-fs/dosfstools sys-fs/ntfs3g
+emerge --ask sys-fs/xfsprogs sys-fs/exfat-utils sys-fs/dosfstools sys-fs/ntfs3g
 ```
 
 ### Adding a user for daily use
@@ -1225,7 +1297,7 @@ passwd <username>
 Sudo is a way that a regular user could run commands as root user. It's very useful to avoid using root password each time we need to run a command which needs root perms. To install run:
 
 ```shell
-emerge -a app-admin/sudo
+emerge --ask app-admin/sudo
 ```
 
 Then edit config file with command:
@@ -1247,7 +1319,7 @@ rm /stage3-*.tar.bz2*
 ### Power consumption optimization with Powertop
 
 ```shell
-emerge -a sys-power/powertop
+emerge --ask sys-power/powertop
 ```
 
 The first step we need to do is to calibrate it, it's quite long process but the most important is to keep our system until the whole process is finished.
@@ -1325,13 +1397,13 @@ INPUT_DEVICES="evdev synaptics
 At the time to write this guide wayland is available but I'ld like to use bspwm which only support xorg so I'll continue with xorg server installation and configuration:
 
 ```shell
-emerge -a xorg-server
+emerge --ask xorg-server
 ```
 
 ### A bunch of useful stuff
 
 ```shell
-emerge -a app-admin/ccze app-arch/unp app-editors/vim app-eselect/eselect-awk app-misc/screen app-shells/gentoo-zsh-completions app-shells/gentoo-zsh-completions app-vim/colorschemes app-vim/eselect-syntax app-vim/genutils app-vim/ntp-syntax media-gfx/feh sys-process/htop x11-terms/rxvt-unicode
+emerge --ask app-admin/ccze app-arch/unp app-editors/vim app-eselect/eselect-awk app-misc/screen app-shells/gentoo-zsh-completions app-shells/gentoo-zsh-completions app-vim/colorschemes app-vim/eselect-syntax app-vim/genutils app-vim/ntp-syntax media-gfx/feh sys-process/htop x11-terms/rxvt-unicode
 ```
 
 ### Portage nice value
@@ -1399,7 +1471,7 @@ nano -w /etc/portage/package.mask
 Overlays contain additional packages for your Gentoo system while the main repository contains all the software packages maintained by Gentoo developers, additional package trees are usually hosted by repositories. Users can add such additional repositories to the tree that are "laid over" the main tree - hence the name, overlays.
 
 ```shell
-emerge -a app-portage/layman
+emerge --ask app-portage/layman
 ```
 
 To list all available overlays simply run:
@@ -1490,7 +1562,7 @@ Device Drivers  --->
 Once we have kernel compiled and running with new options we can continue by installing package:
 
 ```shell
-emerge -av app-emulation/qemu
+emerge --askv app-emulation/qemu
 ```
 
 In order to run kvm as normal user and not as root we should add our user account to the *kvm* group:
@@ -1514,7 +1586,7 @@ The only thing we need to do is to prelink binaries every time we upgrade or ins
 So we will simply install prelink:
 
 ```shell
-emerge -av prelink
+emerge --askv prelink
 ```
 
 Then configure the package by running env-update and then editing config file:
