@@ -24,8 +24,8 @@
     - [Choosing the right profile](#choosing-the-right-profile)
     - [Configuring the USE variable](#configuring-the-use-variable)
     - [Configuring the CPU Flags](#configuring-the-cpu-flags)
-    - [Recompile and update @world](#recompile-and-update-world)
-  - [Configuring base system](#configuring-base-system)
+    - [Re-compile and update @world](#re-compile-and-update-world)
+  - [Configuring the base system](#configuring-the-base-system)
     - [Allow licenses for packages](#allow-licenses-for-packages)
     - [Timezone](#timezone)
     - [Configure locales](#configure-locales)
@@ -33,9 +33,8 @@
       - [Installing external firmware](#installing-external-firmware)
       - [Installing the sources](#installing-the-sources)
         - [Manual set up](#manual-set-up)
-        - [Automatic set up](#automatic-set-up)
+        - [Semi-automatic set up using genkernel](#semi-automatic-set-up-using-genkernel)
       - [Configuring the modules](#configuring-the-modules)
-      - [Installing firmware](#installing-firmware)
     - [LVM Configuration](#lvm-configuration)
     - [Fstab](#fstab)
     - [Configuring crypttab](#configuring-crypttab)
@@ -76,18 +75,18 @@
 
 ## Introduction
 
-Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian and many others, the software is compiled locally according to the user preferences and optimizations.
+Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian, and many others, the software is compiled locally according to the user preferences and optimizations.
 
-The name Gentoo comes from the penguin species which are known to be the fastest in the world.
+The name Gentoo comes from the penguin species, which are known to be the fastest in the world.
 
 I've been using Gentoo since 2002 (20+ years already :astonished: ), and what I like most about Gentoo is:
 
 * Is fun
 * The possibility of getting everything under control
 * Deep customization
-One learns **a lot** about GNU/Linux from using it
+One learns **a lot** about GNU/Linux from using it.
 
-Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power comes great responsibility**. Bear in mind that although Gentoo gives you a lot of flexibility and a tremendous amount of customization, it also requires time, dedication and patience.
+Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power comes great responsibility**. Remember that although Gentoo gives you a lot of flexibility and customization, it also requires time, dedication, and patience.
 
 If you are that kind of person, speak *emerge* and enter :sunrise:
 
@@ -97,7 +96,7 @@ If you are that kind of person, speak *emerge* and enter :sunrise:
 
 ## Installation concerns
 
-> Stop before further reading. It's important to know that this guide only contemplates an installation with UEFI, crypt/luks disk, lvm partitioning, and systemd init system. Please remember that if you want a different setup, don't take this guide like a step-by-step but more as a general guideline.
+> Stop before further reading. It's important to know that this guide only contemplates an installation with UEFI, crypt/luks disk, lvm partitioning, and systemd init system. Please remember that if you want a different setup, don't take this guide step-by-step but as a general guideline.
 
 ## Start live-cd environment
 
@@ -105,7 +104,7 @@ The first thing we need to install our Gentoo is a live-cd environment with UEFI
 
 ~~I like [systemrescuecd](http://www.system-rescue-cd.org) because is Gentoo-based and has UEFI vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick).~~
 
-As [systemrescuecd](http://www.system-rescue-cd.org) is now based on Arch, we're going to use the Gentoo LiveGUI USB Image. You can find it in the [Gentoo downloads section](https://www.gentoo.org/downloads/). Scroll to `Advanced choices and other architectures` and get the `Boot media` called ` LiveGUI USB Image`.
+As [systemrescuecd](http://www.system-rescue-cd.org) is now based on Arch, we will use the Gentoo LiveGUI USB Image. You can find it in the [Gentoo downloads section](https://www.gentoo.org/downloads/). Scroll to `Advanced choices and other architectures` and get the `Boot media` called ` LiveGUI USB Image`.
 
 To make sure that we boot on UEFI mode, by running:
 
@@ -113,15 +112,15 @@ To make sure that we boot on UEFI mode, by running:
 efivar -l
 ```
 
-If the command listed the UEFI variables we're good to go :checkered_flag:
+If the command listed the UEFI variables, we're good to go :checkered_flag:
 
 ### Prepare Hard disk
 
-I suggest you use whatever you're familiar with, I'm going to show you the process using `gdisk`, but others like `cgdisk` or `parted` will do the job.
+I suggest you use whatever you're familiar with, I will show you the process using `gdisk`, but others like `cgdisk` or `parted` will do the job.
 
 | :information_source: Info point                                         |
 | :---------------------------------------------------------------------- |
-| Once you run the first gdisk command, you will enter the gdisk console. |
+| Once you run the first `gdisk` command, you will enter the `gdisk` console. |
 
 If you use SATA disk, run:
 
@@ -144,7 +143,7 @@ o (Create a new empty GUID partition table (GPT))
 Proceed? Y
 ```
 
-Now that we've got the disk wiped, we're going to create some new partitions. The standard partition schema would be a partition for EFI, a partition for SWAP, and one or more for the system. I'm not going to create a partition for SWAP because I have enough RAM to handle the load of the system, but feel free to create one for your needs.
+Now that we've got the disk wiped, we'll create some new partitions. The standard partition schema would be a partition for EFI, a partition for SWAP, and one or more for the system. I'm not going to create a partition for SWAP because I have enough RAM to handle the system's load, but feel free to make one for your needs.
 
 ```shell
 n (Add a new partition)
@@ -176,7 +175,7 @@ Number  Start (sector)    End (sector)  Size       Code  Name
    2         1050624       500118158   238.0 GiB   8300  LVM
 ```
 
-Or in the case of NVME:
+Or, in the case of NVME:
 
 ```shell
 gdisk -l dev/nvme0n1
@@ -187,9 +186,9 @@ Number  Start (sector)    End (sector)  Size       Code  Name
 
 ### Prepare encrypted container
 
-At this point we have the disk partitioned, now we want to create the encrypted container that will enclose the LVM volumes.
+At this point, we have the disk partitioned. Next, we want to create an encrypted container that will hold the LVM volumes.
 
-To get the best performance of working with encrypted containers, we should use an encryption algorithm that is supported by our CPU. We have to be wise in picking up because won't be able to change it afterward. Luckily for us, `cryptosetup` is here :ok_hand:
+To get the best performance of working with encrypted containers, we should use an encryption algorithm supported by our CPU. We have to be wise in picking up because we won't be able to change it afterward. Luckily for us, `cryptosetup` is here :ok_hand:
 
 Run:
 
@@ -223,7 +222,7 @@ argon2id     10 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bi
     twofish-xts        512b       477.6 MiB/s       480.9 MiB/s
 ```
 
-Choose the option with better overall performance. In the output above would be `aes-xts` and the key size `PBKDF2-sha256`.
+Choose the option with better overall performance. For example, in the output above would be `aes-xts` and the key size `PBKDF2-sha256`.
 
 When you have yours chosen, then proceed by running:
 
@@ -231,11 +230,11 @@ When you have yours chosen, then proceed by running:
 cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/nvme0n1p2
 ```
 
-The command is going to ask you to confirm with a `YES`. After a second you should see something like `Command successful`.
+The command will ask you to confirm with a `YES`. After a second, you should see something like `Command successful`.
 
 Then we need to open (decrypt) the container to start creating the volumes inside.
 
-When we open the container we need to specify a label name to identify the container once opened. As you can see, in the command below I've used **cryptcontainer**, be creative :stuck_out_tongue_winking_eye:
+When we open the container, we need to specify a label name to identify the container once opened. As you can see, in the command below, I've used **cryptcontainer**, be creative :stuck_out_tongue_winking_eye:
 
 ```shell
 cryptsetup open --type luks /dev/nvme0n1p2 cryptcontainer
@@ -258,7 +257,7 @@ pvcreate /dev/mapper/cryptcontainer
 vgcreate vg0 /dev/mapper/cryptcontainer
 ```
 
-If running the previous commands you see some warnings like:
+If running the previous commands, you see some warnings like:
 
 ```shell
 WARNING: Failed to connect to lvmetad. Falling back to device scanning.
@@ -352,11 +351,11 @@ If you do, well done :muscle: Let's keep rolling!
 
 ### Create filesystems
 
-The good thing about Linux is that we have a lot of filesystems that we can use, but this is also the bad thing :sweat_smile: "what to choose" and "when" will most probably come to your mind at some point.
+The good thing about Linux is that we have a lot of filesystems that we can use, but this is also the wrong thing :sweat_smile: "what to choose" and "when" will most probably come to your mind at some point.
 
-You can read as much as you want [here](https://wiki.gentoo.org/wiki/Filesystem), but we're going to keep it easy, we will use `ext4`, which is the default filesystem for many Linux distributions.
+You can read as much as you want [here](https://wiki.gentoo.org/wiki/Filesystem), but we'll keep it easy. We will use `ext4`, the default filesystem for many Linux distributions.
 
-Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how UEFI works), and then our main `ext4` filesystems. If you've created more volumes, remember to create a filesystem for all of them:
+Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how UEFI works), and then our main `ext4` filesystems. If you've created more volumes, remember to make a filesystem for all of them:
 
 ```shell
 mkfs.vfat -F32 /dev/nvme0n1p1
@@ -379,7 +378,7 @@ mount /dev/mapper/vg0-home /mnt/gentoo/home
 
 ## Installing the Gentoo base system
 
-Before installing Gentoo, make sure that the date and time are set correctly. A misconfigured clock may lead to strange results in the future, and you don't want this :)
+Before installing Gentoo, ensure the date and time are set correctly. A misconfigured clock may lead to strange results in the future, and you don't want this :)
 
 To check our current system date just run:
 
@@ -401,9 +400,9 @@ ntpdate pool.ntp.org
 
 ### Install the stage3 tarball
 
-To avoid installing Linux from scratch, the awesome Gentoo developers provide a Stage 3 build, which is mainly a **base-binary-semi-working-non-bootable-environment** (no joke :satisfied: ) created to save us tons of time.
+To avoid installing Linux from scratch, the awesome Gentoo developers provide a Stage 3 build, mainly a **base-binary-semi-working-non-bootable-environment** (no joke :satisfied: ) created to save us tons of time.
 
-What we're going to do, is grab that **base-binary-semi-working-non-bootable-environment**, untar it into our Gentoo directory structure. This will create all the necessary binaries and files to start compiling our Gentoo system.
+We're going to grab that **base-binary-semi-working-non-bootable-environment**, untar it into our Gentoo directory structure. This will create all the necessary binaries and files to start compiling our Gentoo system.
 
 We first download the tarball:
 
@@ -426,11 +425,11 @@ Now is when our CPU starts panicking :worried:
 
 I would like to introduce you to `Portage`, Gentoo's cornerstone.
 
-For those who don't know (yet), Portage is Gentoo's auto-build system, or the package management tool. It will grab the source code of anything we want to install (defined in the ebuild file), compile it (based on CPU architecture Flags and which features are available for every package with what are known as "use flags"), and install it in our system. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
+For those who don't know (yet), Portage is Gentoo's auto-build system and package management tool. It will grab the source code of anything we want to install (defined in the `ebuild` file), compile it (based on CPU architecture Flags and which features are available for every package with what are known as "use flags"), and install it in our system. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
 
 This might be intimidating for some of you, but no worries, we will take it step by step.
 
-And the firsts are the CPU flags. The CPU flags are telling the compiler what are the options natively supported for our CPU, this will make the binaries fitting perfectly our CPU type.
+And the firsts are the CPU flags. The CPU flags tell the compiler the options natively supported for our CPU. This translates to our CPU, and not any other will compile the system binaries.
 
 The easiest way is to go to the Gentoo wiki [here](https://wiki.gentoo.org/wiki/Safe_CFLAGS) and check the best `COMMON_FLAGS` to use for your CPU, but if you're interested, you can also do it manually by:
 
@@ -440,7 +439,7 @@ Running:
 gcc -c -Q -march=native --help=target | awk '/^  -march=/ {print $2}'
 ```
 
-You should see one word, in my case was `tigerlake`. So basically this is the best CPU flag for my CPU type.
+You should see one word, in my case, was `tigerlake`. So basically, this is the best CPU flag for my CPU type.
 
 Before setting it, it's worth double checking the value with what is defined in the Gentoo wiki, just in case :)
 
@@ -460,7 +459,7 @@ FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
 ```
 
-Now we're going to set up `MAKEOPTS`. `MAKEOPTS` describes the number of parallel jobs going to be used by Portage.
+Now we're going to set up `MAKEOPTS`. `MAKEOPTS` describes the number of parallel jobs used by Portage.
 
 There's always been some discussion on what to set here, but I'm going to follow what the Gentoo wiki recommends [here](https://wiki.gentoo.org/wiki/MAKEOPTS), which is: `less than or equal to the minimum of the size of RAM/2GB or CPU thread count`.
 
@@ -470,7 +469,7 @@ We will use the number of CPU threads by running:
 lscpu | awk '/^CPU\(s\):/ {print $2}'
 ```
 
-Additionally, to keep the system responsive when we're compiling, the build system supports limiting the maximum load for compilation with the parameter `--load-average`.
+Additionally, to keep the system responsive when compiling, the build system supports limiting the maximum load for compilation with the parameter `--load-average`.
 
 With all that we've said in this section, let's edit the `make.conf` file again:
 
@@ -478,7 +477,7 @@ With all that we've said in this section, let's edit the `make.conf` file again:
 nano /mnt/gentoo/etc/portage/make.conf
 ```
 
-And this time we set `MAKEOPTS`:
+And this time, we set `MAKEOPTS`:
 
 ```shell
 MAKEOPTS="--jobs 8 --load-average 9"
@@ -486,7 +485,7 @@ MAKEOPTS="--jobs 8 --load-average 9"
 
 ### Selecting mirrors
 
-Gentoo uses the closes mirror to sync the packages index, so it's important to set the best mirrors for your location. Luckily the tool `mirrorselect` is going to do the hard work for us :D
+Gentoo uses the closes mirror to sync the packages index, so setting the best mirrors for your location is essential. Luckily the tool `mirrorselect` is going to do the hard work for us :D
 
 :warning: Make sure that you have Internet access from your live-cd:
 
@@ -515,7 +514,7 @@ cp --dereference /etc/resolv.conf /mnt/gentoo/etc/
 
 ### Mounting the necessary filesystems
 
-In addition to LVM filesystem we created in our local disk, other pseudo-filesystems are created during system boot that is needed to chroot into our new environment:
+In addition to the LVM filesystem we created in our local disk, other pseudo-filesystems are created during system boot that is needed to chroot into our new environment:
 
 :warning: If you are setting an environment without `SystemD`, then you can skip the `--make-rslave` lines
 
@@ -542,9 +541,9 @@ source /etc/profile
 export PS1="(chroot) $PS1"
 ```
 
-Great! We are inside our Gentoo system :tada: Unfortunately, still needs a little bit more time baking :cake:
+Great! We are inside our Gentoo system :tada: Unfortunately, it still needs a little bit more time baking :cake:
 
-Take a deep breath, and let's keep rolling
+Please take a deep breath, and let's keep rolling.
 
 ### Configuring Portage
 
@@ -562,7 +561,7 @@ emerge --sync
 
 ### Choosing the right profile
 
-A Portage profile specifies default values for global and per-package USE flags, specifies default values for most variables found in `/etc/portage/make.conf`, and defines a set of system packages. The profiles are maintained by the Gentoo developers as part of the Portage tree.
+A Portage profile specifies default values for global and per-package USE flags, specifies default values for most variables found in `/etc/portage/make.conf`, and defines a set of system packages. The Gentoo developers maintain the profiles as part of the Portage tree.
 
 List the available profiles:
 
@@ -570,7 +569,7 @@ List the available profiles:
 eselect profile list
 ```
 
-From the output list, we must select our best fitting option. Because the system we're building is based on SystemD, the best profile we can choose is the `systemd`. Of course, we can choose any other that has `systemd` in it, like `default/linux/amd64/17.0/desktop/gnome/systemd`, but we want a minimal environment to be configured.
+From the output list, we must select our best fitting option. Because the system we're building is based on `SystemD`, the best profile we can choose is the `systemd`. Of course, we can choose any other that has `systemd` in it, like `default/linux/amd64/17.0/desktop/gnome/systemd`, but we want a minimal environment to be configured.
 
 ```shell
 [..]
@@ -578,7 +577,7 @@ From the output list, we must select our best fitting option. Because the system
 [..]
 ```
 
-This should be the default profile selected as we can tell for the `*` at the end. But if not, make sure you select it with `eselect`:
+This should be the default profile selected, as we can tell for the `*` at the end. But if not, make sure you choose it with `eselect`:
 
 ```shell
 eselect profile set 17 # or the number that you have on your list
@@ -586,20 +585,20 @@ eselect profile set 17 # or the number that you have on your list
 
 ### Configuring the USE variable
 
-As we said, [USE flags](https://wiki.gentoo.org/wiki/USE_flag) are a core feature of Gentoo. A good understanding of how to deal with them is needed to have a customized and healthy Gentoo system.
+As we said, [USE flags](https://wiki.gentoo.org/wiki/USE_flag) are a core feature of Gentoo. Therefore, a good understanding of how to deal with them is needed to have a customized and healthy Gentoo system.
 
 The USE variables can be defined `system-wide` or `per package` domain. You can read more info here:
 
 - System-wide in [/etc/portage/make.conf](https://wiki.gentoo.org/wiki//etc/portage/make.conf#USE)
 - Per package in [/etc/portage/package.use](https://wiki.gentoo.org/wiki//etc/portage/package.use)
 
-We can see the list of USE flags that are currently set up in our system by running:
+We can see the list of USE flags that are set up in our system by running:
 
 ```shell
 emerge --info | grep ^USE
 ```
 
-Don't get scared by the list, you will most probably increase this once we finish with this section.
+Don't get scared by the list. You will most probably increase this once we finish with this section.
 
 We can find a description of all USE flags in `less /var/db/repos/gentoo/profiles/use.desc`.
 
@@ -612,19 +611,19 @@ For example, if you want to know which packages use the `systemd` flag we simply
 quse systemd
 ```
 
-And you will have the list of packages that are affected by `systemd`.
+And you will have the list of packages affected by `systemd`.
 
 | :hand: Reminder                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| At this point is normal if you feel overwhelmed. Setting and choosing the right USE flags before installing anything in our system will save us time later on. It's important to remember tho, that the USE flags that we use can always be changed, and if we choose something that we don't want to use anymore, or we did a mistake, we can always change them, and recompile the affected packages. So, relax :relaxed: |
+| At this point is normal if you feel overwhelmed. Setting and choosing the proper USE flags before installing anything in our system will save us time later. It's crucial to remember that USE flags we use can always be changed, and if we choose something that we don't want to use anymore or we made a mistake, we can always change them and re-compile the affected packages. So, relax :relaxed: |
 
-Said that we're going to use a tool called `ufed` that will help use-setting the USE flags that we want in any domain that we want.
+Said that we're going to use a tool called `ufed` that will help use-setting the USE flags that we want in any domain.
 
 ```shell
 emerge ufed
 ```
 
-And then run it to select the USE flags with a beautiful user interface :smile: This step will take some time, so let's grab a :tea: or :coffee: and let's do it!
+And then, run it to select the USE flags with a beautiful user interface :smile: This step will take some time, so let's grab a :tea: or :coffee: and let's do it!
 
 ```shell
 ufed
@@ -632,7 +631,7 @@ ufed
 
 | :warning: Required USE flags                                                                                                        |
 | :---------------------------------------------------------------------------------------------------------------------------------- |
-| To make sure that our set up will work as expected we need at least these USE falgs set `cryptsetup`, `lvm` and `lvm2create-initrd` |
+| To make sure that our setup will work as expected, we need at least these USE flags set `cryptsetup`, `lvm`, and `lvm2create-initrd` |
 
 
 Once we're done, we can see how many system-wide USE flags we've defined by looking at the `/etc/portage/make.conf` file:
@@ -643,7 +642,7 @@ nano -w /etc/portage/make.conf
 
 | :warning: Don't use this as an example                           |
 | :--------------------------------------------------------------- |
-| These are the USE flags my test system, don't use them for yours |
+| These are the USE flags for my test system, don't use them for yours |
 
 ```shell
 USE="10bit 12bit 256-color 7zip a-like-o aac aacs aalib acpi aio
@@ -659,9 +658,9 @@ USE="10bit 12bit 256-color 7zip a-like-o aac aacs aalib acpi aio
 
 ### Configuring the CPU Flags
 
-USE flags that are available for our system. We could use the advantages of some CPU instructions sets using what is called CPU flags. You can read more in the [Gentoo wiki page](https://wiki.gentoo.org/wiki/CPU_FLAGS_X86).
+USE flags that are available for our system. We could use the advantages of some CPU instruction sets using what are called CPU flags. You can read more on the [Gentoo wiki page](https://wiki.gentoo.org/wiki/CPU_FLAGS_X86).
 
-To know what optimizations can we use for our CPU, we're going to use a tool called `cpuid2cpuflags`:
+To know what optimizations we can use for our CPU, we're going to use a tool called `cpuid2cpuflags`:
 
 ```shell
 emerge --ask app-portage/cpuid2cpuflags
@@ -679,33 +678,33 @@ You should see an output like:
 CPU_FLAGS_X86: aes avx avx2 avx512f avx512dq avx512cd avx512bw avx512vl avx512vbmi f16c fma3 mmx mmxext pclmul popcnt rdrand sha sse sse2 sse3 sse4_1 sse4_2 ssse3
 ```
 
-We have to add this into our `/etc/portage/make.conf` but instead of colon (`:`) we will use this format. CPU flags could be added to `/etc/portage/package.use/` *instead* (with another format), but we will use our beloved :heart: `make.conf` :
+We have to add this into our `/etc/portage/make.conf`, but instead of colon (`:`), we will use this format. CPU flags could be added to `/etc/portage/package.use/` *instead* (with another format), but we will use our beloved :heart: `make.conf` :
 
 ```shell
 nano /etc/portage/make.conf
 ```
 
-And we add our CPU_FLAGS_X86 somewhere in the file
+And we add our CPU_FLAGS_X86 somewhere in the file.
 
 ```shell
 CPU_FLAGS_X86="aes avx avx2 avx512f avx512dq avx512cd avx512bw avx512vl avx512vbmi f16c fma3 mmx mmxext pclmul popcnt rdrand sha sse sse2 sse3 sse4_1 sse4_2 ssse3"
 ```
 
-### Recompile and update @world
+### Re-compile and update @world
 
-After setting up the USE and CPU flags we're ready to re-compile and update all packages that we have installed in our base system before moving forward:
+After setting up the USE and CPU flags, we're ready to re-compile and update all packages that we have installed in our base system before moving forward:
 
 ```shell
 emerge --ask --verbose --update --deep --newuse @world
 ```
 
-## Configuring base system
+## Configuring the base system
 
-In addition to Portage, there're some other options that should be configured before we can take our Gentoo out of the oven :pizza:
+In addition to Portage, some other options should be configured before we can take our Gentoo out of the oven :pizza:
 
 ### Allow licenses for packages
 
-Each package in our Gentoo system has a definition for what kind of license it uses. Setting up a system-wide variable to tell our system what kind of licenses we accept in our system is crucial to avoid problem when installing `free` or `binary redistributable` packages to get installed automatically without asking us everytime they get installed or updated.
+Each package in our Gentoo system defines what kind of license it uses. Setting what licenses we accept in our system is crucial to avoid problems installing `free` or `binary redistributable` packages. Also, to get installed automatically without asking us every time they get installed or updated.
 
 You can read more about Gentoo licenses [here](https://wiki.gentoo.org/wiki/License_groups#Existing_license_groups).
 
@@ -717,13 +716,13 @@ ACCEPT_LICENSE="-* @FREE @BINARY-REDISTRIBUTABLE"
 
 ### Timezone
 
-Set our time zone. We can use the tool `tzselect` to interactibely select our country and will tell us what the value of `/etc/timezone` file should be.
+Set our time zone. We can use the tool `tzselect` to interactively select our country, and it will tell us what the value of `/etc/timezone` file should be.
 
 ```shell
 tzselect
 ```
 
-Take last line from the output and add it to the timezone file like:
+Take the last line from the output and add it to the timezone file like:
 
 ```shell
 ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
@@ -731,9 +730,9 @@ ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 
 ### Configure locales
 
-Locales are a set of information that most programs use for determin the country and language of your system. Most users would use one or a few locales instead of the hundreds that are available. This could save us compiling time, to avoid compiling all languages available of each package, and space on the filesystem by not installing man pages that we can't understand :)
+Locales are a set of information that most programs use to determine the country and language of your system. Most users would use one or a few locales instead of all. This could save us compiling time, to avoid compiling all languages available for each package, and space on the filesystem by not installing man pages that we can't understand :)
 
-Edit the `/etc/locale.gen` and uncomment the locale that you are interested for. Make sure you prioritize `UTF-8` locales, because at least one is needed for the build system to work correctly.
+Edit the `/etc/locale.gen` and uncomment the locale you are interested. Make sure you prioritize `UTF-8` locales because at least one is needed for the build system to work correctly.
 
 ```shell
 nano -w /etc/locale.gen
@@ -745,15 +744,15 @@ Now, execute `locale-gen` to generate all locales specified in the previous file
 locale-gen
 ```
 
-The more locales you select, the slower this proces would be.
+The more locales you select, the slower this process will be.
 
-To check if the locales you've select are active, run the following commend and see if they are on the list. No worries if there're some locales that you didn't select, that's part of the system.
+To check if the locales you've selected are active, run the following command and see if they are on the list. No worries if there're some locales you didn't choose, that's part of the system.
 
 ```shell
 locale -a
 ```
 
-Once the locale is available, let's make sure that is the default one used in our system. Again we use `eselect` for this, now with the locale module:
+Once the locale is available, let's ensure that it is the default one used in our system. Again we use `eselect` for this, now with the locale module:
 
 ```shell
 eselect locale list
@@ -771,7 +770,7 @@ Available targets for the LANG variable:
   [ ]   (free form)
 ```
 
-Pick what locale would you activate and then run the following command with the number that you want to select:
+Pick what locale you would activate and then run the following command with the number that you want to select:
 
 ```shell
 eselect locale set 4
@@ -785,11 +784,11 @@ env-update && source /etc/profile && export PS1="(chroot) $PS1"
 
 ### Configuring Linux kernel
 
-While Portage is the core of Gentoo Linux system, the Linux kernel is the core of the operating system. this last offers an interface for programs to access the hardware via the modules aka drivers.
+While Portage is the core of Gentoo Linux system, the Linux kernel is the operating system's core. Therefore, this last offers an interface for programs to access the hardware via the modules, aka drivers.
 
-To create a binary of the kernel, it is necessary to install the kernel source code first. Gentoo's recomandation is, of course, the kernel package called `sys-kernel/gentoo-sources`. Is maintained by the Gentoo team, and patched to fix security vulnerabilities, functionality problems, as well as to improve compatibility with rare system architectures. But, as always, there're many other options available.
+The first step is installing the kernel source code. Gentoo's recommendation is, of course, the kernel package called `sys-kernel/gentoo-sources`. It is maintained by the Gentoo team and patched to fix security vulnerabilities and functionality problems and improve compatibility with rare system architectures. But, as always, there're many other options available.
 
-To get a full list of kernel sources with short descriptions can be found by searching with emerge:
+To get a complete list of kernel sources with short descriptions can be found by searching with emerge:
 
 ```shell
 emerge --search sources
@@ -797,27 +796,27 @@ emerge --search sources
 
 #### Installing external firmware
 
-Linux kernel is an opensource project, but some hardware manufacturers don't like the idea of open-source the code of it's firmware (or modules) and they release a compiled binary version of them. These binaris can't be included in the Linux kernel repository, and they are all packed in a package called `sys-kernel/linux-firmware`.
+Linux kernel is an open-source project, but some hardware manufacturers don't like the idea of open-source the code of its firmware (or modules), releasing a compiled binary version of them. These binaries can't be included in the Linux kernel repository, and they are packed in a package called `sys-kernel/linux-firmware`.
 
-So, prior to compile the kernel, it is important to know that, first, some devices require additional firmware to make the system run properly, and second, these are more common that we think. From network adapters, wireless card, graphic cards, even CPUs.
+So, before compiling the kernel, it is essential to know that some devices require additional firmware to make the system run properly. Second, these are more common than we think, from network adapters, wireless cards, graphic cards, and CPUs.
 
-For the most common firmware requirements we will install the `sys-kernel/linux-firmware`:
+For the most common firmware requirements, we will install the `sys-kernel/linux-firmware`:
 
 ```shell
 emerge --ask sys-kernel/linux-firmware
 ```
 
-Additionally, check the [Microocode page](https://wiki.gentoo.org/wiki/Microcode) in the Gentoo wiki to see if you need any additional firmware to make your CPU work properly. As an example, for intel CPUs is usually required to install the intel microcode package `sys-firmware/intel-microcode`.
+Additionally, check the [Microocode page](https://wiki.gentoo.org/wiki/Microcode) in the Gentoo wiki to see if you need any additional firmware to make your CPU work properly. For example, intel CPUs are usually required to install the Intel microcode package `sys-firmware/intel-microcode`.
 
 #### Installing the sources
 
-We're not going to get "too crazy" and install Zen kernel (my favourite). We will install the default Gentoo kernel:
+We're not going to get "too crazy" and install Zen kernel (my favorite). Instead, we will install the default Gentoo kernel:
 
 ```shell
 emerge --ask sys-kernel/gentoo-sources
 ```
 
-Once installed we have to select what kernel do we want our system to use by using our magic wand `eselect` :zap:
+Once installed, we have to select what kernel we want our system to use by using our magic wand `eselect` :zap:
 
 ```shell
 eselect kernel list
@@ -838,14 +837,15 @@ eselect kernel set 1
 
 What this actually does is create a symlink `/usr/src/linux` to point to `/usr/src/linux-5.15.59-gentoo`
 
-From this point there're only two things missing: configure and compile it. There are two ways to do that:
+From this point, only two things're missing: configure and compile it. There are two ways to do that:
 
 1. Manual configuration and automated build
-2. Everything automated by using `genkernel`
+2. Semi-automated by using `genkernel`
+3. Fully automated via `distribution kernels` (not covered in this guide. Follow the official documentation [here](https://wiki.gentoo.org/wiki/Project:Distribution_Kernel))
 
 ##### Manual set up
 
-The manual process it's intimidating for beginners, because you can break your system if you miss certain options. There's a lof of reading and digging involved in the process.
+The manual process it's intimidating for beginners because you can break your system if you miss certain options. There's a lof of reading and digging involved in the process.
 
 As much as I would love to spend time explaining every single option of the Kernel, doing so will be time consuming and at least double the size of this guide :bangbang:
 
@@ -853,99 +853,80 @@ So, if you feel brave I will give you some hints:
 
 1. Install `sys-apps/pciutils`. This package contains a tool calles `lspci` that you will use to identify what pci hardware you have in your system. You will have to enable all drivers on the kernel.
 
-```shell
-emerge --ask sys-apps/pciutils
-```
+    ```shell
+    emerge --ask sys-apps/pciutils
+    ```
 
-2. Install `sys-kernel/dracut`. This package will help you creating an `initrmfs` (Init Ram Filesystem) with the required tools to make the kernel bootable:
+2. Configure the kernel by running `make menuconfig` inside `/usr/src/linux`:
 
-```shell
-emerge --ask sys-kernel/dracut
-```
+    ```shell
+    cd /usr/src/linux
+    make menuconfig
+    ```
 
-3. Configure the kernel by running `make menuconfig` inside `/usr/src/linux`:
+3. After the required options are activated either as module or part of the kernel binary, compile the kernel, the modules, and install them by:
 
-```shell
-cd /usr/src/linux
-make menuconfig
-```
+    ```shell
+    make && make modules_install
+    make install
+    ```
 
-4. After the required options are activated either as module or part of the kernel binary, compile the kernel, the modules, and install them by:
+4. Install `sys-kernel/dracut`. This package will help you creating an `initrmfs` (Init Ram Filesystem) with the required tools to make the kernel bootable:
 
-```shell
-make && make modules_install
-make install
-```
+    ```shell
+    emerge --ask sys-kernel/dracut
+    ```
 
-##### Automatic set up
+5. Run drakut to generate an initramfs for our kernel version:
 
-For those who prefer a pleasant initial experience, I'll explain how to use `genkernel`.
+    ```shell
+    dracut --kver=5.15.59-gentoo
+    ```
+
+##### Semi-automatic set up using genkernel
+
+For those who prefer a more pleasant initial experience, I'll explain how to use `genkernel`.
 
 What `genkernel` really does is configuring a generic kernel that works with most of the hardware. Like the LiveCD that we're using does.
 
-```shell
-emerge --ask sys-kernel/genkernel
-```
+1. Install `genkernel`:
 
-Edit */etc/genkernel.conf* to set our preferences:
+    ```shell
+    emerge --ask sys-kernel/genkernel
+    ```
 
-```shell
-nano -w /etc/genkernel.conf
-```
+2. Genkernel needs the `/boot` entry in the `/etc/fstab` file. So go to the [fstab](#fstab) section now and continue with point 2 when you're done.
 
-```shell
-INSTALL="yes"
-OLDCONFIG="yes"
-MENUCONFIG="yes"
-NCONFIG="no"
-CLEAN="yes"
-MRPROPER="yes"
-MOUNTBOOT="yes"
-SYMLINK="no"
-SAVE_CONFIG="yes"
-USECOLOR="yes"
-CLEAR_CACHE_DIR="yes"
-POSTCLEAR="1"
-MAKEOPTS="-j5"
-LVM="yes"
-LUKS="yes"
-DMRAID="no"
-UDEV="yes"
-BOOTDIR="/boot"
-GK_SHARE="${GK_SHARE:-/usr/share/genkernel}"
-CACHE_DIR="/var/cache/genkernel"
-DISTDIR="/var/lib/genkernel/src"
-LOGFILE="/var/log/genkernel.log"
-LOGLEVEL=1
-DEFAULT_KERNEL_SOURCE="/usr/src/linux"
-COMPRESS_INITRD="yes"
-COMPRESS_INITRD_TYPE="best"
-```
+3. Edit `/etc/genkernel.conf`:
 
-Notice that LVM, LUKS and UDEV must be set on to have this system works otherwise will not boot.
+    ```shell
+    nano -w /etc/genkernel.conf
+    ```
 
-Once configured then simply run:
+    Make sure that `LVM` and `LUKS` are set to `yes` otherwise the system will not boot. Leave the rest of options as they are:
 
-```shell
-genkernel all
-```
+    ```shell
+    # Add LVM support
+    LVM="yes"
+
+    # Add LUKS support
+    LUKS="yes"
+    ```
+
+4. Once `genkernel` is configured, then run to generate the kernel binary:
+
+    ```shell
+    genkernel all
+    ```
 
 #### Configuring the modules
 
-If we need to auto-load a kernel module each time to system boots we should specify it in */etc/conf.d/modules* file.
+If we need to auto-load a kernel module each time to system boots we should specify it in `/etc/conf.d/modules` file.
 
 You can list your available modules with:
 
 ```shell
 find /lib/modules/<kernel version>/ -type f -iname '*.o' -or -iname '*.ko' | less
-```
-
-#### Installing firmware
-
-Some drivers require additional firmware to be installed on the system before they work. This is often the case for network interfaces, especially wireless network interfaces. Most of the firmware is packaged in *sys-kernel/linux-firmware*, so installing them are almost needed in a laptop system:
-
-```shell
-emerge --ask sys-kernel/linux-firmware
 ```
 
 ### LVM Configuration
@@ -989,8 +970,8 @@ nano -w /etc/fstab
 /dev/sda1                                       /boot   vfat    noatime                                         1 2
 UUID="576e229c-cf68-4010-8d85-ff8149158416"     /       ext4    discard,noatime,commit=600,errors=remount-ro    0 1
 UUID="95fa5807-ea57-4cf5-b717-74f4aba190e2"     /home   ext4    discard,noatime,commit=600                      0 0
-tmpfs                                           /var/tmp tmpfs  nodev,nosuid    								0 0
-tmpfs                                           /tmp    tmpfs   nodev,nosuid    								0 0
+tmpfs                                           /var/tmp tmpfs  nodev,nosuid                    0 0
+tmpfs                                           /tmp    tmpfs   nodev,nosuid                    0 0
 ```
 
 ### Configuring crypttab
@@ -1085,9 +1066,9 @@ efibootmgr -v
 BootCurrent: 0003
 Timeout: 1 seconds
 BootOrder: 0003
-Boot0000* Linux Boot Manager	HD(1,GPT,3eb8effe-8e1d-4670-987c-9b49b5f605b2,0x800,0x1ff801)/File(\EFI\systemd\systemd-bootx64.efi)
-Boot0001* gentoo	HD(1,GPT,02f231b8-8f9a-471c-b3a9-dc7edb1bd70e,0x800,0xee000)/File(\EFI\gentoo\grubx64.efi)
-Boot0003* Gentoo Linux	PciRoot(0x0)/Pci(0x1f,0x2)/Sata(2,32768,0)/HD(1,GPT,73f682fe-e07b-4870-be82-d85077f8aaa2,0x800,0x100000)/File(\EFI\systemd\systemd-bootx64.efi)
+Boot0000* Linux Boot Manager  HD(1,GPT,3eb8effe-8e1d-4670-987c-9b49b5f605b2,0x800,0x1ff801)/File(\EFI\systemd\systemd-bootx64.efi)
+Boot0001* gentoo  HD(1,GPT,02f231b8-8f9a-471c-b3a9-dc7edb1bd70e,0x800,0xee000)/File(\EFI\gentoo\grubx64.efi)
+Boot0003* Gentoo Linux  PciRoot(0x0)/Pci(0x1f,0x2)/Sata(2,32768,0)/HD(1,GPT,73f682fe-e07b-4870-be82-d85077f8aaa2,0x800,0x100000)/File(\EFI\systemd\systemd-bootx64.efi)
 ```
 
 I'm only Gentoo in my system so I don't really need anything but the Gentoo entry so I just delete everything with:
@@ -1374,9 +1355,9 @@ nano -w /etc/X11/xorg.conf.d/20-intel.conf
 Section "Device"
    Identifier  "Intel Graphics"
    Driver      "intel"
-	Option      "AccelMethod"  "sna"
-	Option      "DRI"          "3"
-	Option      "Backlight"    "intel_backlight"
+  Option      "AccelMethod"  "sna"
+  Option      "DRI"          "3"
+  Option      "Backlight"    "intel_backlight"
 EndSection
 ```
 
