@@ -837,7 +837,7 @@ eselect kernel set 1
 
 What this actually does is create a symlink `/usr/src/linux` to point to `/usr/src/linux-5.15.59-gentoo`
 
-From this point, only two things're missing: configure and compile it. There are two ways to do that:
+From this point, only two things are missing: configure and compile it. There are two ways to do that:
 
 1. Manual configuration and automated build
 2. Semi-automated by using `genkernel`
@@ -845,13 +845,13 @@ From this point, only two things're missing: configure and compile it. There are
 
 ##### Manual set up
 
-The manual process it's intimidating for beginners because you can break your system if you miss certain options. There's a lof of reading and digging involved in the process.
+The manual process it's intimidating for beginners because you can break your system if you miss specific options. In addition, the process involves a lot of reading and digging.
 
-As much as I would love to spend time explaining every single option of the Kernel, doing so will be time consuming and at least double the size of this guide :bangbang:
+As much as I would love to spend time explaining every single option of the kernel, doing so will be time-consuming and at least double the size of this guide :bangbang:
 
-So, if you feel brave I will give you some hints:
+So, if you feel brave, I will give you some hints:
 
-1. Install `sys-apps/pciutils`. This package contains a tool calles `lspci` that you will use to identify what pci hardware you have in your system. You will have to enable all drivers on the kernel.
+1. Install `sys-apps/pciutils`. This package contains a tool called `lspci` that you will use to identify what PCI hardware you have in your system. You will have to enable all drivers on the kernel.
 
     ```shell
     emerge --ask sys-apps/pciutils
@@ -864,20 +864,20 @@ So, if you feel brave I will give you some hints:
     make menuconfig
     ```
 
-3. After the required options are activated either as module or part of the kernel binary, compile the kernel, the modules, and install them by:
+3. After the required options are activated either as a module or part of the kernel binary, compile the kernel and the modules, and install them by:
 
     ```shell
     make && make modules_install
     make install
     ```
 
-4. Install `sys-kernel/dracut`. This package will help you creating an `initrmfs` (Init Ram Filesystem) with the required tools to make the kernel bootable:
+4. Install `sys-kernel/dracut`. This package will help you create an `initrmfs` (Init Ram Filesystem) with the required tools to make the kernel bootable:
 
     ```shell
     emerge --ask sys-kernel/dracut
     ```
 
-5. Run drakut to generate an initramfs for our kernel version:
+5. Run `drakut` to generate an `initramfs` for our kernel version:
 
     ```shell
     dracut --kver=5.15.59-gentoo
@@ -887,7 +887,7 @@ So, if you feel brave I will give you some hints:
 
 For those who prefer a more pleasant initial experience, I'll explain how to use `genkernel`.
 
-What `genkernel` really does is configuring a generic kernel that works with most of the hardware. Like the LiveCD that we're using does.
+What `genkernel` really does is configure a generic kernel that works with most of the hardware. Like the LiveCD that we're using does.
 
 1. Install `genkernel`:
 
@@ -903,7 +903,7 @@ What `genkernel` really does is configuring a generic kernel that works with mos
     nano -w /etc/genkernel.conf
     ```
 
-    Make sure that `LVM` and `LUKS` are set to `yes` otherwise the system will not boot. Leave the rest of options as they are:
+    Ensure that `LVM` and `LUKS` are set to `yes`; otherwise, the system will not boot. Leave the rest of the options as they are:
 
     ```shell
     # Add LVM support
@@ -921,7 +921,7 @@ What `genkernel` really does is configuring a generic kernel that works with mos
 
 #### Configuring the modules
 
-If we need to auto-load a kernel module each time to system boots we should specify it in `/etc/conf.d/modules` file.
+If we need to auto-load a kernel module each time to system boots, we should specify it in `/etc/conf.d/modules` file.
 
 You can list your available modules with:
 
@@ -931,7 +931,7 @@ find /lib/modules/<kernel version>/ -type f -iname '*.o' -or -iname '*.ko' | les
 
 ### LVM Configuration
 
-Install lvm tools if it's not yet installed:
+Install lvm2 tools if it is not yet installed:
 
 ```shell
 emerge --ask sys-fs/lvm2
@@ -951,7 +951,7 @@ volume_list = ["vg0"] # Our VG volume name, check with vgdisplay
 
 ### Fstab
 
-Before editing fstab we need to know which UUID are using our devices inside and outside lvm and luks volumes:
+Before editing `fstab` we need to know which UUID are using our devices inside and outside `lvm` and `luks` volumes:
 
 ```shell
 blkid /dev/mapper/vg0-root | awk '{print $2}' | sed 's/"//g'
@@ -960,7 +960,7 @@ blkid /dev/mapper/vg0-home | awk '{print $2}' | sed 's/"//g'
 UUID="95fa5807-ea57-4cf5-b717-74f4aba190e2"
 ```
 
-Then edit fstab:
+Then edit `/etc/fstab`:
 
 ```shell
 nano -w /etc/fstab
@@ -976,11 +976,11 @@ tmpfs                                           /tmp    tmpfs   nodev,nosuid    
 
 ### Configuring crypttab
 
-Warning!!! As we don't have encrypted partitions other than root which must be mounted by systemd before the whole system start we don't need to set it up there, so, our crypttab must be empty.
+Warning!!! As we don't have encrypted partitions other than root, which the `systemd` must mount before the whole system start, we don't need to set it up there, so our `crypttab` must be empty.
 
 ### Configuring mtab
 
-In the past some utilities wrote information (like mount options) into /etc/mtab and thus it was supposed to be a regular file. Nowadays all software is supposed to avoid this problem. Still, before switching the file to become a symbolic link to /proc/self/mounts.
+In the past, some utilities wrote information (like mount options) into `/etc/mtab`; thus, it was supposed to be a regular file. Nowadays all software is supposed to avoid this problem. Still, before switching the file to become a symbolic link to /proc/self/mounts.
 
 To create the symlink, run:
 
