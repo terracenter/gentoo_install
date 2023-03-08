@@ -68,7 +68,7 @@
     - [Masked and unmasked packages](#masked-and-unmasked-packages)
     - [Overlays](#overlays)
       - [Custom overlay](#custom-overlay)
-    - [Virtualization (How to use Qemu & kvm)](#virtualization-how-to-use-qemu--kvm)
+    - [Virtualization (How to use Qemu \& kvm)](#virtualization-how-to-use-qemu--kvm)
       - [Kernel options](#kernel-options)
     - [Speed up the system with prelink](#speed-up-the-system-with-prelink)
   - [Last notes](#last-notes)
@@ -118,8 +118,8 @@ If the command listed the UEFI variables, we're good to go :checkered_flag:
 
 I suggest you use whatever you're familiar with, I will show you the process using `gdisk`, but others like `cgdisk` or `parted` will do the job.
 
-| :information_source: Info point                                         |
-| :---------------------------------------------------------------------- |
+| :information_source: Info point                                             |
+| :-------------------------------------------------------------------------- |
 | Once you run the first `gdisk` command, you will enter the `gdisk` console. |
 
 If you use SATA disk, run:
@@ -178,7 +178,7 @@ Number  Start (sector)    End (sector)  Size       Code  Name
 Or, in the case of NVME:
 
 ```shell
-gdisk -l dev/nvme0n1
+gdisk -l /dev/nvme0n1
 Number  Start (sector)    End (sector)  Size       Code  Name
    1            2048         1050623   512.0 MiB   EF00  EFI
    2         1050624       500118158   238.0 GiB   8300  LVM
@@ -300,7 +300,7 @@ If what you see makes sense, let's create the volumes:
 
 ```shell
 lvcreate --size 50G vg0 --name root
-lvcreate -l +100%FREE vg0 --name home
+lvcreate --extent 100%FREE vg0 --name home
 ```
 
 To double-check what we've done, run:
@@ -407,7 +407,7 @@ We're going to grab that **base-binary-semi-working-non-bootable-environment**, 
 We first download the tarball:
 
 ```shell
-curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://bouncer.gentoo.org/fetch/root/all/releases/amd64/autobuilds/20220821T170533Z/stage3-amd64-systemd-20220821T170533Z.tar.xz
+curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://bouncer.gentoo.org/fetch/root/all/releases/amd64/autobuilds/20230307T201702Z/stage3-amd64-systemd-20230307T201702Z.tar.xz
 ```
 
 And we unpack it in our root directory that is mounted in `/mnt/gentoo` directory:
@@ -613,14 +613,14 @@ quse systemd
 
 And you will have the list of packages affected by `systemd`.
 
-| :hand: Reminder                                                                                                                                                                                                                                                                                                                                                                                                             |
-| :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| :hand: Reminder                                                                                                                                                                                                                                                                                                                                                                                           |
+| :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | At this point is normal if you feel overwhelmed. Setting and choosing the proper USE flags before installing anything in our system will save us time later. It's crucial to remember that USE flags we use can always be changed, and if we choose something that we don't want to use anymore or we made a mistake, we can always change them and re-compile the affected packages. So, relax :relaxed: |
 
 Said that we're going to use a tool called `ufed` that will help use-setting the USE flags that we want in any domain.
 
 ```shell
-emerge ufed
+emerge app-portage/eix app-portage/ufed
 ```
 
 And then, run it to select the USE flags with a beautiful user interface :smile: This step will take some time, so let's grab a :tea: or :coffee: and let's do it!
@@ -629,8 +629,8 @@ And then, run it to select the USE flags with a beautiful user interface :smile:
 ufed
 ```
 
-| :warning: Required USE flags                                                                                                        |
-| :---------------------------------------------------------------------------------------------------------------------------------- |
+| :warning: Required USE flags                                                                                                         |
+| :----------------------------------------------------------------------------------------------------------------------------------- |
 | To make sure that our setup will work as expected, we need at least these USE flags set `cryptsetup`, `lvm`, and `lvm2create-initrd` |
 
 
@@ -640,8 +640,8 @@ Once we're done, we can see how many system-wide USE flags we've defined by look
 nano -w /etc/portage/make.conf
 ```
 
-| :warning: Don't use this as an example                           |
-| :--------------------------------------------------------------- |
+| :warning: Don't use this as an example                               |
+| :------------------------------------------------------------------- |
 | These are the USE flags for my test system, don't use them for yours |
 
 ```shell
