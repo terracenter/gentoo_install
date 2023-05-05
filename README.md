@@ -877,7 +877,7 @@ So, if you feel brave, I will give you some hints:
     emerge --ask sys-kernel/dracut
     ```
 
-5. Run `drakut` to generate an `initramfs` for our kernel version:
+5. Run `dracut` to generate an `initramfs` for our kernel version:
 
     ```shell
     dracut --kver=5.15.59-gentoo
