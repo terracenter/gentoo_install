@@ -73,405 +73,335 @@
     - [Speed up the system with prelink](#speed-up-the-system-with-prelink)
   - [Last notes](#last-notes)
 
-## Introduction
+## Introducción
 
-Gentoo is a Linux distribution that, unlike binary distros like Arch, Debian, and many others, the software is compiled locally according to the user preferences and optimizations.
+Gentoo es una distribución Linux que, a diferencia de las distribuciones binarias como Arch, Debian y muchas otras, el software se compila localmente según las preferencias y optimizaciones del usuario.
 
-The name Gentoo comes from the penguin species, which are known to be the fastest in the world.
+El nombre Gentoo procede de la especie de pingüinos, conocidos por ser los más rápidos del mundo.
 
-I've been using Gentoo since 2002 (20+ years already :astonished: ), and what I like most about Gentoo is:
+Llevo un rato usando Gentoo, y lo que más me gusta de Gentoo es:
 
-* Is fun
-* The possibility of getting everything under control
-* Deep customization
-One learns **a lot** about GNU/Linux from using it.
+* Es divertido
+* La posibilidad de tenerlo todo bajo control
+* Personalización profunda Uno aprende mucho sobre GNU/Linux usándolo.
 
-Disclaimer: Gentoo is the perfect distribution to use the quote from an ancient adage that says: **With great power comes great responsibility**. Remember that although Gentoo gives you a lot of flexibility and customization, it also requires time, dedication, and patience.
+Descargo de responsabilidad: Gentoo es la distribución perfecta para utilizar la cita de un antiguo adagio que dice: Un gran poder conlleva una gran responsabilidad. Recuerda que aunque Gentoo te da mucha flexibilidad y personalización, también requiere tiempo, dedicación y paciencia.
 
-If you are that kind of person, speak *emerge* and enter :sunrise:
+Si eres ese tipo de persona, habla claro y entra en :sunrise:
 
-| :warning: Disclaimer                                                                                                                              |
+| :warning:  Descargo de responsabilidad                                                                                                                              |
 | :------------------------------------------------------------------------------------------------------------------------------------------------ |
-| This guide is intended to be a learning experience, and I will try to explain all steps to give you an understanding of what we're doing and why. |
+| Esta guía pretende ser una experiencia de aprendizaje, e intentaré explicar todos los pasos para que entiendas lo que estamos haciendo y por qué. |
 
-## Installation concerns
+## Problemas de instalación
 
-> Stop before further reading. It's important to know that this guide only contemplates an installation with UEFI, crypt/luks disk, lvm partitioning, and systemd init system. Please remember that if you want a different setup, don't take this guide step-by-step but as a general guideline.
+> Detente antes de seguir leyendo. Es importante saber que esta guía sólo contempla una instalación con UEFI, disco crypt/luks, particionado lvm y sistema init systemd. Por favor, recuerda que si quieres una configuración diferente, no tomes esta guía paso a paso sino como una pauta general.
 
-## Start live-cd environment
+## Iniciar entorno live-cd
 
-The first thing we need to install our Gentoo is a live-cd environment with UEFI vars enabled.
+Lo primero que necesitamos para instalar nuestro Gentoo es un entorno live-cd con UEFI vars habilitado.
 
-~~I like [systemrescuecd](http://www.system-rescue-cd.org) because is Gentoo-based and has UEFI vars enabled. You can download it here [bootable usb](https://www.system-rescue-cd.org/Sysresccd-manual-en_How_to_install_SystemRescueCd_on_an_USB-stick).~~
-
-As [systemrescuecd](http://www.system-rescue-cd.org) is now based on Arch, we will use the Gentoo LiveGUI USB Image. You can find it in the [Gentoo downloads section](https://www.gentoo.org/downloads/). Scroll to `Advanced choices and other architectures` and get the `Boot media` called ` LiveGUI USB Image`.
-
-To make sure that we boot on UEFI mode, by running:
+Para asegurarnos de que arrancamos en modo UEFI, ejecutando:
 
 ```shell
 efivar -l
 ```
 
-If the command listed the UEFI variables, we're good to go :checkered_flag:
+Si el comando enumera las variables UEFI, estamos listos para ir :checkered_flag:
 
-### Prepare Hard disk
+### Preparar disco duro
 
-I suggest you use whatever you're familiar with, I will show you the process using `gdisk`, but others like `cgdisk` or `parted` will do the job.
-
-| :information_source: Info point                                             |
-| :-------------------------------------------------------------------------- |
-| Once you run the first `gdisk` command, you will enter the `gdisk` console. |
-
-If you use SATA disk, run:
+Te sugiero que uses cualquiera con el que estés familiarizado, yo te mostraré el proceso usando `gdisk`, pero otros como `cgdisk` o `parted` harán el trabajo.
 
 ```shell
-gdisk /dev/sda
+parted -l
+```
+```
+Model: WDC PC SN530 SDBPMPZ-512G-1101 (nvme)
+Disk /dev/nvme0n1: 512GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags:
+```
+```bash
+parted /dev/nvme0n1 mklabel gpt 
+```
+```bash
+ parted -a opt /dev/nvme0n1 mkpart ESP fat32 1MB 512MB
+```
+```bash
+parted /dev/nvme0n1 set 1 esp on
+```
+```bash
+parted -a opt /dev/nvme0n1 mkpart primary  512MB 100%
+```
+```bash
+parted /dev/nvme0n1 set 2 lvm on
+```
+```bash
+parted -l
+```
+```
+Number  Start   End    Size   File system  Name     Flags
+ 1      1049kB  512MB  511MB  fat32        ESP      boot, esp
+ 2      512MB   512GB  512GB               primary  lvm
 ```
 
-I will continue using NVME, but if you use a SATA disk, from now on, replace everything appearance of `/dev/nvme0n1` or `/dev/nvme0n1p1`, for `/dev/sda` or `dev/sda1` :thumbsup:
+### Preparar contenedor encriptado
 
-If you use `NVME` disk, then run:
+En este punto, tenemos el disco particionado. A continuación, queremos crear un contenedor cifrado que contendrá los volúmenes LVM.
 
-```shell
-gdisk /dev/nvme0n1
-```
+Para obtener el mejor rendimiento al trabajar con contenedores encriptados, debemos utilizar un algoritmo de encriptación soportado por nuestra CPU. Debemos ser prudentes a la hora de elegirlo porque no podremos cambiarlo después. Por suerte para nosotros, `cryptosetup` está aquí :ok_hand:
 
-Create a new GUID partition table and destroy everything on the disk:
-
-```shell
-o (Create a new empty GUID partition table (GPT))
-Proceed? Y
-```
-
-Now that we've got the disk wiped, we'll create some new partitions. The standard partition schema would be a partition for EFI, a partition for SWAP, and one or more for the system. I'm not going to create a partition for SWAP because I have enough RAM to handle the system's load, but feel free to make one for your needs.
-
-```shell
-n (Add a new partition)
-Partition number 1
-First sector 2048 (default)
-Last sector +512M
-Hex code EF00
-
-n (Add a new partition)
-Partition number 2
-First sector 1050624 (default)
-Last sector (press Enter to use remaining disk)
-Hex code 8E00
-```
-
-Now, apply the changes to the disk and quit:
-
-```shell
-w
-Y
-```
-
-Partitions should look something like this:
-
-```shell
-gdisk -l /dev/sda
-Number  Start (sector)    End (sector)  Size       Code  Name
-   1            2048         1050623   512.0 MiB   EF00  EFI
-   2         1050624       500118158   238.0 GiB   8300  LVM
-```
-
-Or, in the case of NVME:
-
-```shell
-gdisk -l /dev/nvme0n1
-Number  Start (sector)    End (sector)  Size       Code  Name
-   1            2048         1050623   512.0 MiB   EF00  EFI
-   2         1050624       500118158   238.0 GiB   8300  LVM
-```
-
-### Prepare encrypted container
-
-At this point, we have the disk partitioned. Next, we want to create an encrypted container that will hold the LVM volumes.
-
-To get the best performance of working with encrypted containers, we should use an encryption algorithm supported by our CPU. We have to be wise in picking up because we won't be able to change it afterward. Luckily for us, `cryptosetup` is here :ok_hand:
-
-Run:
+Ejecutar:
 
 ```shell
 cryptsetup benchmark
 ```
 
-You should see something like this:
+Deberías ver algo como esto:
 
 ```shell
 # Tests are approximate using memory only (no storage IO).
-PBKDF2-sha1      3355443 iterations per second for 256-bit key
-PBKDF2-sha256    5447148 iterations per second for 256-bit key
-PBKDF2-sha512    2068197 iterations per second for 256-bit key
-PBKDF2-ripemd160 1182160 iterations per second for 256-bit key
-PBKDF2-whirlpool  784862 iterations per second for 256-bit key
-argon2i      10 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
-argon2id     10 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
+PBKDF2-sha1      2685213 iterations per second for 256-bit key
+PBKDF2-sha256    4843307 iterations per second for 256-bit key
+PBKDF2-sha512    1934642 iterations per second for 256-bit key
+PBKDF2-ripemd160 1086607 iterations per second for 256-bit key
+PBKDF2-whirlpool  757641 iterations per second for 256-bit key
+argon2i       7 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
+argon2id      7 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
 #     Algorithm |       Key |      Encryption |      Decryption
-        aes-cbc        128b      1876.9 MiB/s      7495.4 MiB/s
-    serpent-cbc        128b       113.2 MiB/s       816.2 MiB/s
-    twofish-cbc        128b       283.5 MiB/s       516.3 MiB/s
-        aes-cbc        256b      1431.1 MiB/s      5949.0 MiB/s
-    serpent-cbc        256b       114.3 MiB/s       816.3 MiB/s
-    twofish-cbc        256b       284.0 MiB/s       516.4 MiB/s
-        aes-xts        256b      6022.2 MiB/s      6000.8 MiB/s
-    serpent-xts        256b       767.7 MiB/s       728.6 MiB/s
-    twofish-xts        256b       475.3 MiB/s       481.8 MiB/s
-        aes-xts        512b      5261.2 MiB/s      5233.4 MiB/s
-    serpent-xts        512b       776.3 MiB/s       729.4 MiB/s
-    twofish-xts        512b       477.6 MiB/s       480.9 MiB/s
+        aes-cbc        128b      1762.8 MiB/s      6652.8 MiB/s
+    serpent-cbc        128b       111.2 MiB/s       767.8 MiB/s
+    twofish-cbc        128b       271.7 MiB/s       488.4 MiB/s
+        aes-cbc        256b      1401.0 MiB/s      5413.3 MiB/s
+    serpent-cbc        256b       112.9 MiB/s       785.0 MiB/s
+    twofish-cbc        256b       277.4 MiB/s       475.3 MiB/s
+        aes-xts        256b      5438.5 MiB/s      5523.9 MiB/s
+    serpent-xts        256b       714.5 MiB/s       692.0 MiB/s
+    twofish-xts        256b       451.1 MiB/s       447.8 MiB/s
+        aes-xts        512b      4724.3 MiB/s      4778.2 MiB/s
+    serpent-xts        512b       744.7 MiB/s       703.9 MiB/s
+    twofish-xts        512b       453.0 MiB/s       455.3 MiB/s
 ```
-
-Choose the option with better overall performance. For example, in the output above would be `aes-xts` and the key size `PBKDF2-sha256`.
-
-When you have yours chosen, then proceed by running:
+Elija la opción con mejor rendimiento global. Por ejemplo, en la salida anterior sería `aes-xts` y el tamaño de la clave `PBKDF2-sha256`.
+```
+aes-xts        256b      5438.5 MiB/s      5523.9 MiB/s
+```
+Cuando haya elegido la suya, proceda a ejecutarla:
 
 ```shell
 cryptsetup -v --cipher aes-xts-plain64 --key-size 256 -y luksFormat /dev/nvme0n1p2
 ```
+El comando le pedirá que confirme con un `YES`. Después de un segundo, debería ver algo como `Command successful`.
 
-The command will ask you to confirm with a `YES`. After a second, you should see something like `Command successful`.
+```
+Enter passphrase for /dev/nvme0n1p2: 
+Verify passphrase:
+```
+A continuación, tenemos que abrir (descifrar) el contenedor para empezar a crear los volúmenes en su interior.
 
-Then we need to open (decrypt) the container to start creating the volumes inside.
-
-When we open the container, we need to specify a label name to identify the container once opened. As you can see, in the command below, I've used **cryptcontainer**, be creative :stuck_out_tongue_winking_eye:
+Cuando abrimos el contenedor, necesitamos especificar un nombre de etiqueta para identificar el contenedor una vez abierto. Como puedes ver, en el comando de abajo, he usado **cryptcontainer**, sé creativo :stuck_out_tongue_winking_eye:
 
 ```shell
 cryptsetup open --type luks /dev/nvme0n1p2 cryptcontainer
 ```
 
-And... we're done with the encryption. Now, volume time! :sound:
+Y... hemos terminado con la encriptación. Ahora, ¡hora del volumen! :sound:
 
-### Create LVM volumes
+### Crear volúmenes LVM
 
-| :information_source: Info point                                                                                                                                              |
+| :information_source: Punto de información                                                                                                                                             |
 | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| For those of you that are not familiar with this acronym, LVM stands for **Logical Volume Management**. You can read more about it [here](https://wiki.gentoo.org/wiki/LVM). |
+| Para aquellos de ustedes que no están familiarizados con este acrónimo, LVM significa Logical Volume Management. Puedes leer más sobre ello [aquí](https://wiki.gentoo.org/wiki/LVM). |
 
-The good thing about logical volumes is that you can modify them at any point. In this example, I'm going to create two logical volumes, one for the `root` partition and one for the `home`, but feel free to create as many as you want.
+Lo bueno de los volúmenes lógicos es que puedes modificarlos en cualquier momento. En este ejemplo, voy a crear los volúmenes lógicos, uno para:
 
-Also, I'll use the name `vg0` to identify this volume group. This is a trivial name, so again, be creative :D
+- `root`     
+- `home`     
+- `var`
+- `var/tmp`
+- `opt`
+- `tmp`
+- `swap`
+
+ **NOTA**:
+   
+   Pero siéntete libre de crear tantos como quieras.
+
+Además, usaré el nombre vg0 para identificar este grupo de volúmenes. Este es un nombre trivial, así que de nuevo, se creativo :D
 
 ```shell
 pvcreate /dev/mapper/cryptcontainer
 vgcreate vg0 /dev/mapper/cryptcontainer
 ```
+Está bien siempre y cuando veas un `Physical volume "/dev/mapper/cryptcontainer" successfully created.` siguiente.
 
-If running the previous commands, you see some warnings like:
-
-```shell
-WARNING: Failed to connect to lvmetad. Falling back to device scanning.
-```
-
-It's fine as long as you see a `Physical volume "/dev/mapper/cryptcontainer" successfully created.` following.
 
 At this point, let's check that what we have is what we want:
 
 ```shell
-vgdisplay
+vgs
 ```
 
 You should see something like:
 
 ```shell
-  --- Volume group ---
-  VG Name               vg0
-  System ID
-  Format                lvm2
-  Metadata Areas        1
-  Metadata Sequence No  1
-  VG Access             read/write
-  VG Status             resizable
-  MAX LV                0
-  Cur LV                0
-  Open LV               0
-  Max PV                0
-  Cur PV                1
-  Act PV                1
-  VG Size               63.48 GiB
-  PE Size               4.00 MiB
-  Total PE              16251
-  Alloc PE / Size       0 / 0
-  Free  PE / Size       16251 / 63.48 GiB
-  VG UUID               uQEI07-lgcP-hQ6j-jTR8-BhsO-AsTA-IlLMwC
+VG  #PV #LV #SN Attr   VSize    VFree   
+vg0   1   0   0 wz--n- <476.45g <476.45g
 ```
 
-If what you see makes sense, let's create the volumes:
+Si lo que ves tiene sentido, vamos a crear los volúmenes:
 
 ```shell
-lvcreate --size 50G vg0 --name root
-lvcreate --extent 100%FREE vg0 --name home
+lvcreate --size 20G vg0 --name root
+lvcreate --size 4G vg0 --name var
+lvcreate --size 10G vg0 --name var_tmp
+lvcreate --size 1G vg0 --name opt
+lvcreate --size 2G vg0 --name tmp
+lvcreate --size 2G vg0 --name swap
+lvcreate --size 100G vg0 --name home
 ```
 
-To double-check what we've done, run:
+Para volver a comprobar lo que hemos hecho, ejecuta:
+```shell
+lvs
+```
+
+Deberías ver algo como:
 
 ```shell
-lvdisplay
+    LV      VG  Attr       LSize   Pool Origin Data%  Meta%  Move Log Cpy%Sync Convert
+  home    vg0 -wi-a----- 100.00g                                                    
+  opt     vg0 -wi-a-----   1.00g                                                    
+  root    vg0 -wi-a-----  20.00g                                                    
+  swap    vg0 -wi-a-----   2.00g                                                    
+  tmp     vg0 -wi-a-----   2.00g                                                    
+  var     vg0 -wi-a-----   4.00g                                                    
+  var_tmp vg0 -wi-a-----  10.00g
 ```
+Si es así, bien hecho :muscle: ¡Sigamos rodando!
 
-You should see something like:
 
-```shell
-  --- Logical volume ---
-  LV Path                /dev/vg0/root
-  LV Name                root
-  VG Name                vg0
-  LV UUID                ggiZPZ-ygBQ-0fxR-oiXN-qLjC-KDOm-phY1ip
-  LV Write Access        read/write
-  LV Creation host, time livecd, 2022-08-26 09:35:21 +0000
-  LV Status              available
-  # open                 0
-  LV Size                50.00 GiB
-  Current LE             12800
-  Segments               1
-  Allocation             inherit
-  Read ahead sectors     auto
-  - currently set to     256
-  Block device           253:0
+### Crear sistemas de archivos
+Lo bueno de Linux es que tenemos un montón de sistemas de archivos que podemos usar, pero esto también es lo malo :sweat_smile:  "qué elegir" y "cuándo" es muy probable que te venga a la cabeza en algún momento.
 
-  --- Logical volume ---
-  LV Path                /dev/vg0/home
-  LV Name                home
-  VG Name                vg0
-  LV UUID                PZwAiM-kbw5-Cq1y-63xY-nApf-VEms-t31rJI
-  LV Write Access        read/write
-  LV Creation host, time livecd, 2022-08-26 09:35:32 +0000
-  LV Status              available
-  # open                 0
-  LV Size                1.77 TiB
-  Current LE             464003
-  Segments               1
-  Allocation             inherit
-  Read ahead sectors     auto
-  - currently set to     256
-  Block device           253:1
-```
+Puedes leer todo lo que quieras [aquí](https://wiki.gentoo.org/wiki/Filesystem), pero lo haremos fácil. Usaremos `ext4`, el sistema de archivos por defecto de muchas distribuciones de Linux.
 
-If you do, well done :muscle: Let's keep rolling!
-
-### Create filesystems
-
-The good thing about Linux is that we have a lot of filesystems that we can use, but this is also the wrong thing :sweat_smile: "what to choose" and "when" will most probably come to your mind at some point.
-
-You can read as much as you want [here](https://wiki.gentoo.org/wiki/Filesystem), but we'll keep it easy. We will use `ext4`, the default filesystem for many Linux distributions.
-
-Let's create our three main filesystems volumes, one FAT32 for UEFI (:fearful: yes, I know, but this is how UEFI works), and then our main `ext4` filesystems. If you've created more volumes, remember to make a filesystem for all of them:
+Vamos a crear nuestros volúmenes principales de sistemas de ficheros, uno FAT32 para UEFI (:fearful: sí, lo sé, pero así es como funciona UEFI), y luego nuestros principales sistemas de ficheros `ext4`. Si has creado más volúmenes, recuerda crear un sistema de ficheros para todos ellos:
 
 ```shell
 mkfs.vfat -F32 /dev/nvme0n1p1
-mkfs.ext4 /dev/mapper/vg0-root
-mkfs.ext4 /dev/mapper/vg0-home
+mkfs.ext4 -F /dev/mapper/vg0-root
+mkfs.ext4 -F /dev/mapper/vg0-home
+mkfs.ext4 -F /dev/mapper/vg0-opt
+mkfs.ext4 -F /dev/mapper/vg0-tmp
+mkfs.ext4 -F /dev/mapper/vg0-var
+mkfs.ext4 -F /dev/mapper/vg0-var_tmp
+mkswap /dev/vg0/swap
 ```
 
-### Mount the new filesystems
+### Montar los nuevos sistemas de archivos
 
-With our logical volumes created and our filesystems ready, let's mount our partitions to start building our Gentoo system:
+Con nuestros volúmenes lógicos creados y nuestros sistemas de ficheros listos, montemos nuestras particiones para empezar a construir nuestro sistema Gentoo:
 
 ```shell
 mkdir -p /mnt/gentoo
 mount /dev/mapper/vg0-root /mnt/gentoo
 mkdir -p /mnt/gentoo/boot
 mount /dev/nvme0n1p1 /mnt/gentoo/boot
-mkdir /mnt/gentoo/home
+mkdir -p  /mnt/gentoo/{home,opt,tmp,var}
 mount /dev/mapper/vg0-home /mnt/gentoo/home
+mount /dev/mapper/vg0-opt /mnt/gentoo/opt
+mount /dev/mapper/vg0-tmp /mnt/gentoo/tmp
+mount /dev/mapper/vg0-var /mnt/gentoo/var
+mkdir /mnt/gentoo/var/tmp
+mount /dev/mapper/vg0-var_tmp /mnt/gentoo/var/tmp
+swapon /dev/vg0/swap
 ```
 
-## Installing the Gentoo base system
+## Instalación del sistema base Gentoo
 
-Before installing Gentoo, ensure the date and time are set correctly. A misconfigured clock may lead to strange results in the future, and you don't want this :)
+Antes de instalar Gentoo, asegúrate de que la fecha y la hora están configuradas correctamente. Un reloj mal configurado puede conducir a resultados extraños en el futuro, y usted no quiere esto :)
 
-To check our current system date just run:
+Para comprobar la fecha actual del sistema, ejecuteÑ
 
 ```shell
 date
 ```
 
-Select the timezone:
+Seleccione la zona horaria:
 
 ```shell
 tzselect
 ```
 
-Then use NTP to set sync the time and date:
+A continuación, utiliza NTP para sincronizar la hora y la fecha:
 
 ```shell
-ntpdate pool.ntp.org
+chronyd -q
 ```
 
-### Install the stage3 tarball
+### Instalar el tarball stage3
 
-To avoid installing Linux from scratch, the awesome Gentoo developers provide a Stage 3 build, mainly a **base-binary-semi-working-non-bootable-environment** (no joke :satisfied: ) created to save us tons of time.
+Para evitar instalar Linux desde cero, los increíbles desarrolladores de Gentoo proporcionan una compilación de Fase 3, principalmente un entorno base-binario-semi-funcional-no-arrancable (no es broma :satisfied: ) creado para ahorrarnos toneladas de tiempo.
 
-We're going to grab that **base-binary-semi-working-non-bootable-environment**, untar it into our Gentoo directory structure. This will create all the necessary binaries and files to start compiling our Gentoo system.
+Vamos a coger ese entorno **base-binario-semi-operativo-no-arrancable**, y lo untaremos en nuestra estructura de directorios Gentoo. Esto creará todos los binarios y archivos necesarios para empezar a compilar nuestro sistema Gentoo.
 
-We first download the tarball:
+Primero descargamos el tarball:
 
 ```shell
-curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://bouncer.gentoo.org/fetch/root/all/releases/amd64/autobuilds/20230307T201702Z/stage3-amd64-systemd-20230307T201702Z.tar.xz
+curl -o /mnt/gentoo/stage3-amd64-systemd.tar.xz -L https://mirror.bytemark.co.uk/gentoo//releases/amd64/autobuilds/current-stage3-amd64-systemd/stage3-amd64-systemd-20231210T170356Z.tar.xz
 ```
+Y lo desempaquetamos en nuestro directorio raíz que está montado en el directorio `/mnt/gentoo`:
 
-And we unpack it in our root directory that is mounted in `/mnt/gentoo` directory:
 
 ```shell
 cd /mnt/gentoo/
 tar xvf stage3-*.tar.xz --xattrs
 ```
 
-At this point, we have all files to start setting up our new Gentoo environment.
+En este punto, tenemos todos los archivos para empezar a configurar nuestro nuevo entorno Gentoo.
 
-Now is when our CPU starts panicking :worried:
+Ahora es cuando nuestra CPU empieza a entrar en pánico :worried:.
 
-### Configuring compile options
+### Configuración de las opciones de compilación
 
-I would like to introduce you to `Portage`, Gentoo's cornerstone.
+Me gustaría presentarle `Portage`, la piedra angular de Gentoo.
 
-For those who don't know (yet), Portage is Gentoo's auto-build system and package management tool. It will grab the source code of anything we want to install (defined in the `ebuild` file), compile it (based on CPU architecture Flags and which features are available for every package with what are known as "use flags"), and install it in our system. There's also the option to download pre-compiled packages, but I like to make my CPU work hard :D
+Para aquellos que no lo sepan (todavía), Portage es el sistema de autocompilación y la herramienta de gestión de paquetes de Gentoo. Tomará el código fuente de cualquier cosa que queramos instalar (definido en el archivo `ebuild), lo compilará (basándose en las banderas de arquitectura de la CPU y qué características están disponibles para cada paquete con lo que se conoce como "banderas de uso"), y lo instalará en nuestro sistema. También existe la opción de descargar paquetes precompilados, pero a mí me gusta hacer trabajar duro a mi CPU :D
 
-This might be intimidating for some of you, but no worries, we will take it step by step.
+Esto puede resultar intimidante para algunos de ustedes, pero no se preocupen, lo haremos paso a paso.
 
-And the firsts are the CPU flags. The CPU flags tell the compiler the options natively supported for our CPU. This translates to our CPU, and not any other will compile the system binaries.
+Y las primeras son las banderas de la CPU. Los flags de CPU indican al compilador las opciones soportadas nativamente por nuestra CPU. Esto se traduce en que nuestra CPU, y no cualquier otra compilará los binarios del sistema.
 
-The easiest way is to go to the Gentoo wiki [here](https://wiki.gentoo.org/wiki/Safe_CFLAGS) and check the best `COMMON_FLAGS` to use for your CPU, but if you're interested, you can also do it manually by:
+La forma más fácil es ir a la wiki de Gentoo [aquí](https://wiki.gentoo.org/wiki/Safe_CFLAGS) y comprobar los mejores COMMON_FLAGS a utilizar para tu CPU, pero si estás interesado, también puedes hacerlo manualmente por:
 
-Running:
-
-```shell
-gcc -c -Q -march=native --help=target | awk '/^  -march=/ {print $2}'
-```
-
-You should see one word, in my case, was `tigerlake`. So basically, this is the best CPU flag for my CPU type.
-
-Before setting it, it's worth double checking the value with what is defined in the Gentoo wiki, just in case :)
-
-Now, edit this file:
-
-```shell
+``shell
 nano -w /mnt/gentoo/etc/portage/make.conf
 ```
 
 And set the `-march=tigerlake` (or the type you got) at the beginning of `COMMON_FLAGS` to something like:
 
 ```shell
-COMMON_FLAGS="-march=tigerlake -O2 -pipe"
+COMMON_FLAGS="-march=native -O2 -pipe"
 CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS}"
 FCFLAGS="${COMMON_FLAGS}"
 FFLAGS="${COMMON_FLAGS}"
 ```
+Ahora vamos a configurar `MAKEOPTS`. `MAKEOPTS` describe el número de trabajos paralelos utilizados por Portage.
 
-Now we're going to set up `MAKEOPTS`. `MAKEOPTS` describes the number of parallel jobs used by Portage.
+Siempre ha habido alguna discusión sobre qué establecer [aquí](https://wiki.gentoo.org/wiki/MAKEOPTS), pero yo voy a seguir lo que recomienda la wiki de Gentoo, que es: `menos o igual al mínimo del tamaño de RAM/2GB o del número de hilos de la CPU`.
 
-There's always been some discussion on what to set here, but I'm going to follow what the Gentoo wiki recommends [here](https://wiki.gentoo.org/wiki/MAKEOPTS), which is: `less than or equal to the minimum of the size of RAM/2GB or CPU thread count`.
-
-We will use the number of CPU threads by running:
+Utilizaremos el número de hilos de la CPU en ejecución:
 
 ```shell
 lscpu | awk '/^CPU\(s\):/ {print $2}'
 ```
+Además, para mantener la capacidad de respuesta del sistema al compilar, el sistema de compilación permite limitar la carga máxima de compilación con el parámetro `--load-average`.
 
-Additionally, to keep the system responsive when compiling, the build system supports limiting the maximum load for compilation with the parameter `--load-average`.
-
-With all that we've said in this section, let's edit the `make.conf` file again:
+Con todo lo que hemos dicho en esta sección, vamos a editar el archivo `make.conf` de nuevo:
 
 ```shell
 nano /mnt/gentoo/etc/portage/make.conf
@@ -483,40 +413,38 @@ And this time, we set `MAKEOPTS`:
 MAKEOPTS="--jobs 8 --load-average 9"
 ```
 
-### Selecting mirrors
+### Selección de espejos
+Gentoo utiliza el espejo de closes para sincronizar el índice de paquetes, por lo que configurar los mejores espejos para tu ubicación es esencial. Por suerte la herramienta `mirrorselect` va a hacer el trabajo duro por nosotros :D
 
-Gentoo uses the closes mirror to sync the packages index, so setting the best mirrors for your location is essential. Luckily the tool `mirrorselect` is going to do the hard work for us :D
-
-:warning: Make sure that you have Internet access from your live-cd:
+:warning: Asegúrate de que tienes acceso a Internet desde tu live-cd:
 
 ```shell
 mirrorselect -D -s4 -o >> /mnt/gentoo/etc/portage/make.conf
 ```
+Ahora debería tener una entrada para GENTOO_MIRRORS en `/mnt/gentoo/etc/portage/make.conf`.
 
-You should now have an entry for `GENTOO_MIRRORS` in `/mnt/gentoo/etc/portage/make.conf`.
+### Configuración del repositorio principal de Gentoo
 
-### Configuring the main Gentoo repository
-
-Copy the Gentoo repository configuration file from Portage package:
+Copie el archivo de configuración del repositorio Gentoo del paquete Portage:
 
 ```shell
 mkdir -p /mnt/gentoo/etc/portage/repos.conf
 cp /mnt/gentoo/usr/share/portage/config/repos.conf /mnt/gentoo/etc/portage/repos.conf/gentoo.conf
 ```
 
-### Copy DNS info
+### Copiar información DNS
 
-Copy the DNS information from your working live-cd environment into the new system to make sure that we will be able to resolve domain names once we switch to it:
+Copie la información DNS de su entorno live-cd de trabajo en el nuevo sistema para asegurarse de que podremos resolver los nombres de dominio una vez que cambiemos a él:
 
 ```shell
 cp --dereference /etc/resolv.conf /mnt/gentoo/etc/
 ```
 
-### Mounting the necessary filesystems
+### Montaje de los sistemas de archivos necesarios
 
-In addition to the LVM filesystem we created in our local disk, other pseudo-filesystems are created during system boot that is needed to chroot into our new environment:
+Además del sistema de ficheros LVM que creamos en nuestro disco local, durante el arranque del sistema se crean otros pseudo-sistemas de ficheros necesarios para hacer chroot en nuestro nuevo entorno:
 
-:warning: If you are setting an environment without `SystemD`, then you can skip the `--make-rslave` lines
+:warning: Si está configurando un entorno sin `SystemD`, puede omitir las líneas `--make-rslave`
 
 ```shell
 mount --types proc /proc /mnt/gentoo/proc
@@ -528,9 +456,9 @@ mount --bind /run /mnt/gentoo/run
 mount --make-slave /mnt/gentoo/run
 ```
 
-### Entering the new environment
+### Entrar en el nuevo entorno
 
-Chroot into the new environment:
+Chroot en el nuevo entorno:
 
 ```shell
 chroot /mnt/gentoo /bin/bash
@@ -540,90 +468,90 @@ chroot /mnt/gentoo /bin/bash
 source /etc/profile
 export PS1="(chroot) $PS1"
 ```
+¡¡¡Genial!!! Estamos dentro de nuestro sistema Gentoo :tada: Por desgracia, todavía necesita un poco más de tiempo de cocción :cake:.
 
-Great! We are inside our Gentoo system :tada: Unfortunately, it still needs a little bit more time baking :cake:
+Por favor, respiren hondo y sigamos rodando.
 
-Please take a deep breath, and let's keep rolling.
+### Configuración de Portage
 
-### Configuring Portage
+Portage hace el trabajo pesado de la gestión de repositorios y paquetes. Todo, desde la resolución de dependencias, la construcción del código fuente y la instalación del software en nuestro sistema, lo hace Portage, utilizando algunas de las herramientas que proporciona, como `emerge`.
 
-Portage does the heavy lifting of repository and package management. Everything from dependency resolution, building source code, and installing the software on our system is done by Portage, using some of the tools that it provides, such as `emerge`.
+Primero, necesitamos sincronizar los repositorios remotos con el árbol local de Portage para saber qué paquetes están disponibles para ser instalados.
 
-First, we need to synchronize the remote repositories with the local Portage tree to know what packages are available to be installed.
+### Actualización del árbol Portage
 
-### Updating the Portage tree
-
-Then update the snapshot with the latest version of the repository:
+A continuación, actualice la instantánea con la última versión del repositorio:
 
 ```shell
-emerge --sync
+emerge-webrsync -v
+emerge --sync -v
 ```
 
-### Choosing the right profile
+### Elegir el perfil adecuado
 
-A Portage profile specifies default values for global and per-package USE flags, specifies default values for most variables found in `/etc/portage/make.conf`, and defines a set of system packages. The Gentoo developers maintain the profiles as part of the Portage tree.
+Un perfil Portage especifica valores por defecto para banderas USE globales y por paquete, especifica valores por defecto para la mayoría de las variables que se encuentran en `/etc/portage/make.conf`, y define un conjunto de paquetes del sistema. Los desarrolladores de Gentoo mantienen los perfiles como parte del árbol Portage.
 
-List the available profiles:
+Enumera los perfiles disponibles:
 
 ```shell
 eselect profile list
 ```
+De la lista de salida, debemos seleccionar nuestra mejor opción de ajuste. Como el sistema que estamos construyendo está basado en SystemD, el mejor perfil que podemos elegir es systemd. Por supuesto, podemos elegir cualquier otro que tenga `systemd`, como `default/linux/amd64/17.0/desktop/gnome/systemd`, pero queremos que se configure un entorno mínimo.
 
 From the output list, we must select our best fitting option. Because the system we're building is based on `SystemD`, the best profile we can choose is the `systemd`. Of course, we can choose any other that has `systemd` in it, like `default/linux/amd64/17.0/desktop/gnome/systemd`, but we want a minimal environment to be configured.
 
 ```shell
 [..]
-[17]  default/linux/amd64/17.1/systemd (stable) *
+ [17]  default/linux/amd64/17.1/systemd/merged-usr (stable) *
 [..]
 ```
+Este debería ser el perfil seleccionado por defecto, como podemos ver por el `*` al final. Pero si no es así, asegúrese de elegirlo con `eselect`:
 
-This should be the default profile selected, as we can tell for the `*` at the end. But if not, make sure you choose it with `eselect`:
 
 ```shell
-eselect profile set 17 # or the number that you have on your list
+eselect profile set 17 # o el número que tiene en su lista
 ```
 
-### Configuring the USE variable
+### Configuración de la variable USE
 
-As we said, [USE flags](https://wiki.gentoo.org/wiki/USE_flag) are a core feature of Gentoo. Therefore, a good understanding of how to deal with them is needed to have a customized and healthy Gentoo system.
+Como hemos dicho, las banderas [USE flags](https://wiki.gentoo.org/wiki/USE_flag) son una característica central de Gentoo. Por lo tanto, una buena comprensión de cómo tratar con ellos es necesaria para tener un sistema Gentoo personalizado y saludable.
 
-The USE variables can be defined `system-wide` or `per package` domain. You can read more info here:
+As we said,  are a core feature of Gentoo. Therefore, a good understanding of how to deal with them is needed to have a customized and healthy Gentoo system.
 
-- System-wide in [/etc/portage/make.conf](https://wiki.gentoo.org/wiki//etc/portage/make.conf#USE)
-- Per package in [/etc/portage/package.use](https://wiki.gentoo.org/wiki//etc/portage/package.use)
+Las variables USE pueden definirse para todo el sistema o por dominio de paquete. Puede obtener más información aquí:
 
-We can see the list of USE flags that are set up in our system by running:
+- Todo el sistema en [/etc/portage/make.conf](https://wiki.gentoo.org/wiki//etc/portage/make.conf#USE)
+- Por envase en [/etc/portage/package.use](https://wiki.gentoo.org/wiki//etc/portage/package.use)
+
+Podemos ver la lista de banderas USE que están configuradas en nuestro sistema ejecutando:
 
 ```shell
 emerge --info | grep ^USE
 ```
 
-Don't get scared by the list. You will most probably increase this once we finish with this section.
+No te asustes por la lista. Lo más probable es que la aumentes cuando acabemos con esta sección.
 
-We can find a description of all USE flags in `less /var/db/repos/gentoo/profiles/use.desc`.
+Podemos encontrar una descripción de todas las banderas USE en `less /var/db/repos/gentoo/profiles/use.desc`.
 
-
-Additionally, the utility named `quse` from `portage-utils` package can tell us which package uses what USE flags.
+Además, la utilidad llamada `quse` del paquete `portage-utils` puede decirnos qué paquete utiliza qué banderas USE.
 
 For example, if you want to know which packages use the `systemd` flag we simply need to run:
 
 ```shell
 quse systemd
 ```
-
-And you will have the list of packages affected by `systemd`.
+Por ejemplo, si queremos saber qué paquetes utilizan la bandera `systemd` sólo tenemos que ejecutar:
 
 | :hand: Reminder                                                                                                                                                                                                                                                                                                                                                                                           |
 | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| At this point is normal if you feel overwhelmed. Setting and choosing the proper USE flags before installing anything in our system will save us time later. It's crucial to remember that USE flags we use can always be changed, and if we choose something that we don't want to use anymore or we made a mistake, we can always change them and re-compile the affected packages. So, relax :relaxed: |
+| En este punto es normal si te sientes abrumado. Establecer y elegir los USE flags adecuados antes de instalar nada en nuestro sistema nos ahorrará tiempo más adelante. Es crucial recordar que las banderas USE que usamos siempre se pueden cambiar, y si elegimos algo que ya no queremos usar o cometimos un error, siempre podemos cambiarlas y volver a compilar los paquetes afectados. Así que, relájate :relaxed: |
 
-Said that we're going to use a tool called `ufed` that will help use-setting the USE flags that we want in any domain.
+Hemos dicho que vamos a utilizar una herramienta llamada `ufed` que nos ayudará a establecer las banderas USE que queramos en cualquier dominio..
 
 ```shell
-emerge app-portage/eix app-portage/ufed
+emerge -aqv app-portage/eix app-portage/ufed
 ```
-
-And then, run it to select the USE flags with a beautiful user interface :smile: This step will take some time, so let's grab a :tea: or :coffee: and let's do it!
+Y luego, ejecútalo para seleccionar las banderas USE con una :smile: interfaz de usuario 😄 Este paso te llevará algo de tiempo, así que ¡coge una :tea: o :coffee y hagámoslo!
 
 ```shell
 ufed
@@ -631,30 +559,9 @@ ufed
 
 | :warning: Required USE flags                                                                                                         |
 | :----------------------------------------------------------------------------------------------------------------------------------- |
-| To make sure that our setup will work as expected, we need at least these USE flags set `cryptsetup`, `lvm`, and `lvm2create-initrd` |
+| Para asegurarnos de que nuestra configuración funcionará como se espera, necesitamos al menos estas banderas USE establecidas `cryptsetup` y `lvm` |
 
 
-Once we're done, we can see how many system-wide USE flags we've defined by looking at the `/etc/portage/make.conf` file:
-
-```shell
-nano -w /etc/portage/make.conf
-```
-
-| :warning: Don't use this as an example                               |
-| :------------------------------------------------------------------- |
-| These are the USE flags for my test system, don't use them for yours |
-
-```shell
-USE="10bit 12bit 256-color 7zip a-like-o aac aacs aalib acpi aio
-     bash-completion boost branding caps contrib cpu cpudetection cpuid
-     cpuinfo cpuload cryptsetup dbus efi64 gd gzip hardened hddtemp highlight
-     highlighting imagemagick initramfs int64 ipv4 jemalloc jpeg json
-     kmod lm-sensors lvm lvm2create-initrd lz4 lzip lzma lzo lzo2 nano
-     nano-syntax networkmanager nss numa opencl opengl openssl python ssh
-     sslv2 sslv3 startup-notification tcmalloc threaded threads thunderbolt
-     truetype udisks uefi unzip upower usb x264 x265 xfs xv zeroconf
-     zsh-completion -cups"
-```
 
 ### Configuring the CPU Flags
 
@@ -663,7 +570,7 @@ USE flags that are available for our system. We could use the advantages of some
 To know what optimizations we can use for our CPU, we're going to use a tool called `cpuid2cpuflags`:
 
 ```shell
-emerge --ask app-portage/cpuid2cpuflags
+emerge -q app-portage/cpuid2cpuflags
 ```
 
 And then run it to get those values:
@@ -675,19 +582,10 @@ cpuid2cpuflags
 You should see an output like:
 
 ```shell
-CPU_FLAGS_X86: aes avx avx2 avx512f avx512dq avx512cd avx512bw avx512vl avx512vbmi f16c fma3 mmx mmxext pclmul popcnt rdrand sha sse sse2 sse3 sse4_1 sse4_2 ssse3
+CPU_FLAGS_X86: aes avx avx2 avx512_bitalg avx512_vbmi2 avx512_vnni avx512_vp2intersect avx512_vpopcntdq avx512bw avx512cd avx512dq avx512f avx512ifma avx512vbmi avx512vl f16c fma3 mmx mmxext pclmul popcnt rdrand sha sse sse2 sse3 sse4_1 sse4_2 ssse3 vpclmulqdq
 ```
-
-We have to add this into our `/etc/portage/make.conf`, but instead of colon (`:`), we will use this format. CPU flags could be added to `/etc/portage/package.use/` *instead* (with another format), but we will use our beloved :heart: `make.conf` :
-
-```shell
-nano /etc/portage/make.conf
-```
-
-And we add our CPU_FLAGS_X86 somewhere in the file.
-
-```shell
-CPU_FLAGS_X86="aes avx avx2 avx512f avx512dq avx512cd avx512bw avx512vl avx512vbmi f16c fma3 mmx mmxext pclmul popcnt rdrand sha sse sse2 sse3 sse4_1 sse4_2 ssse3"
+```bash
+echo "*/* $(cpuid2cpuflags)" > /etc/portage/package.use/00cpu-flags
 ```
 
 ### Re-compile and update @world
@@ -695,7 +593,7 @@ CPU_FLAGS_X86="aes avx avx2 avx512f avx512dq avx512cd avx512bw avx512vl avx512vb
 After setting up the USE and CPU flags, we're ready to re-compile and update all packages that we have installed in our base system before moving forward:
 
 ```shell
-emerge --ask --verbose --update --deep --newuse @world
+emerge -aq --verbose --update --deep --newuse @world
 ```
 
 ## Configuring the base system
